@@ -1,4 +1,4 @@
-package controllers.singlePlayer.hauck;
+package controllers.singlePlayer.ehauckdo;
 
 import core.game.StateObservation;
 import core.player.AbstractPlayer;

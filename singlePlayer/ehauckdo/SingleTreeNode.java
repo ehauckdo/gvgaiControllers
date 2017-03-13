@@ -1,4 +1,4 @@
-package controllers.singlePlayer.hauck;
+package controllers.singlePlayer.ehauckdo;
 
 import java.util.Random;
 
