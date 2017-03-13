@@ -2,7 +2,6 @@ package controllers.singlePlayer.ehauckdo;
 
 import java.util.Random;
 
-import core.ArcadeMachine;
 import core.game.Observation;
 import core.game.StateObservation;
 import java.util.ArrayList;
@@ -25,10 +24,13 @@ public class SingleTreeNode
     public SingleTreeNode[] children;
     public Types.ACTIONS[] actions;
     
-    public double totValue; // what is this??
+    public double totValue; 
     public int nVisits;
     private int m_depth;
     public int num_actions;
+    
+    public double currentBestFitness = 0;
+    double[][] weightMatrix = new double[5][5];
     
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public double K = Math.sqrt(2);
@@ -61,46 +63,16 @@ public class SingleTreeNode
         int numIters = 0;
 
         int remainingLimit = 5;
-        double[][] new_weightMatrix = null;
-        /*double[][] weightMatrix = new double[5][5];
-        initializeWeightMatrix(weightMatrix, 5, 5);   
-        
-        double[][] new_weightMatrix = weightMatrix;*/
-        double currentFitness = 0;
+
         double delta = 0;
         
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
             SingleTreeNode selected = treePolicy();
-            
-            /* Fast Evolution entre aqui */  
-            
-            /*new_weightMatrix = new double[5][5];
-            initializeWeightMatrix(new_weightMatrix, 5, 5); */   
-            
-            /*System.out.println("New matrix:");
-            for(int i = 0; i < 5; i++){
-                for(int j = 0; j < 5; j++){
-                    System.out.print(String.format( "%.2f", new_weightMatrix[i][j])+" ");
-                }
-                System.out.println("");
-            }*/
-            
-            
-            delta = selected.rollOut(new_weightMatrix);
+           
+            delta = selected.rollOut();
             backUp(selected, delta);
             
-            /*if(delta > currentFitness){
-                currentFitness = delta;
-                weightMatrix = new_weightMatrix;
-            }
-            
-            System.out.println("Delta: "+delta);
-            mutateWeightMatrix(new_weightMatrix, 5, 5);*/
-            
-            
-            /* ******* */
-
             numIters++;
             acumTimeTaken += (elapsedTimerIteration.elapsedMillis()) ;
 
@@ -240,27 +212,34 @@ public class SingleTreeNode
     }
 
 
-    public double rollOut(double[][] weightMatrix)
+    public double rollOut()
     {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
+        
+        // get a new mutated weight matrix     
+        double[][] mutated_weightMatrix = MCTS.mutateWeightMatrix();
 
         while (!finishRollout(rollerState,thisDepth)) {
+               
+            double[] features = queryState(rollerState);  
             
-            /* Fast Evolution entre aqui */  
+            // use mutated matrix to calculate next action for the rollout
+            int action = calculateAction(mutated_weightMatrix, features);
             
-            /*double[] features = queryState(rollerState);         
-            int action = calculateAction(weightMatrix, features);*/
-            
-            int action = m_rnd.nextInt(num_actions);
-            
-            /* ************************ */
-    
+            //int action = m_rnd.nextInt(num_actions);
+             
             rollerState.advance(actions[action]);
             thisDepth++;
         }
 
         double delta = value(rollerState);
+        
+        // if the resulting delta gives best fitness, save the mutated matrix
+        if(delta > currentBestFitness){
+            currentBestFitness = delta;
+            MCTS.weightMatrix = mutated_weightMatrix;
+        }
 
         if(delta < bounds[0])
             bounds[0] = delta;
@@ -476,27 +455,6 @@ public class SingleTreeNode
         
         return features;
         
-    }
-    
-    public void initializeWeightMatrix(double[][] weightMatrix, int x, int y){
-        Random rnd = new Random();
-        for(int i = 0; i < x; i++)
-            for(int j = 0; j < y; j++){
-                weightMatrix[i][j] = rnd.nextDouble();
-            }
-    }
-    
-    public void mutateWeightMatrix(double[][] weightMatrix, int x, int y){
-        /*for(int i = 0; i < x; i++)
-            for(int j = 0; j < y; j++){
-                weightMatrix[i][j] = m_rnd.nextDouble();
-            }*/
-        
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
     }
     
     public int calculateAction(double[][] weightMatrix, double[] features){

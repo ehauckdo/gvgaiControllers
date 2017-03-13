@@ -13,8 +13,9 @@ import tools.ElapsedCpuTimer;
 public class MCTS extends CustomController {
 
     public SingleTreeNode m_root;
+    public static double[][] weightMatrix;
 
-    public Random m_rnd;
+    public static Random m_rnd;
     public int num_actions;
     Types.ACTIONS[] actions;
 
@@ -23,6 +24,7 @@ public class MCTS extends CustomController {
         this.num_actions = num_actions;
         this.actions = actions;
         m_rnd = a_rnd;
+        initializeWeightMatrix();
         
     }  
     
@@ -42,6 +44,28 @@ public class MCTS extends CustomController {
     @Override
     public boolean switchController() {
         return false;
+    }
+    
+    public static void initializeWeightMatrix(){
+        weightMatrix = new double[5][5];
+        for(int i = 0; i < 5; i++)
+            for(int j = 0; j < 5; j++){
+                weightMatrix[i][j] = m_rnd.nextDouble();
+            }
+    }
+    
+    public static double[][] mutateWeightMatrix(){
+        double[][] mutated_weightMatrix = new double[5][5];
+        for(int i = 0; i < 5; i++)
+            System.arraycopy(weightMatrix[i], 0, mutated_weightMatrix[i], 0, 5);
+        
+        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        
+        return mutated_weightMatrix;
     }
 
 }
