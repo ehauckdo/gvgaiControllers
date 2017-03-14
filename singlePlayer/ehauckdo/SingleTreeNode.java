@@ -5,33 +5,37 @@ import java.util.Random;
 import core.game.Observation;
 import core.game.StateObservation;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
 import tools.Vector2d;
 
-public class SingleTreeNode
-{
+public class SingleTreeNode {
+
     private final double HUGE_NEGATIVE = -10000000.0;
-    private final double HUGE_POSITIVE =  10000000.0;
+    private final double HUGE_POSITIVE = 10000000.0;
     public final int ROLLOUT_DEPTH = 10;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
     public Random m_rnd;
-    
+
     public StateObservation state;
     public SingleTreeNode parent;
     public SingleTreeNode[] children;
     public Types.ACTIONS[] actions;
-    
-    public double totValue; 
+
+    public double totValue;
     public int nVisits;
     private int m_depth;
     public int num_actions;
-    
+
     public double currentBestFitness = 0;
     double[][] weightMatrix = new double[5][5];
-    
+
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public double K = Math.sqrt(2);
     public int iterations = 0;
@@ -48,10 +52,11 @@ public class SingleTreeNode
         this.actions = actions;
         children = new SingleTreeNode[num_actions];
         totValue = 0.0;
-        if(parent != null)
-            m_depth = parent.m_depth+1;
-        else
+        if (parent != null) {
+            m_depth = parent.m_depth + 1;
+        } else {
             m_depth = 0;
+        }
 
     }
 
@@ -65,47 +70,47 @@ public class SingleTreeNode
         int remainingLimit = 5;
 
         double delta = 0;
-        
-        while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
+
+        while (remaining > 2 * avgTimeTaken && remaining > remainingLimit) {
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
             SingleTreeNode selected = treePolicy();
-           
+
             delta = selected.rollOut();
             backUp(selected, delta);
-            
-            numIters++;
-            acumTimeTaken += (elapsedTimerIteration.elapsedMillis()) ;
 
-            avgTimeTaken  = acumTimeTaken/numIters;
+            numIters++;
+            acumTimeTaken += (elapsedTimerIteration.elapsedMillis());
+
+            avgTimeTaken = acumTimeTaken / numIters;
             remaining = elapsedTimer.remainingTimeMillis();
             //System.out.println(elapsedTimerIteration.elapsedMillis() + " --> " + acumTimeTaken + " (" + remaining + ")");
             iterations++;
         }
-         
-        /*System.out.println("Iterations: "+iterations);
+
+        System.out.println("Iterations: " + iterations);
+        System.out.println("Average time:" + avgTimeTaken);
+
+        /*
         System.out.println("Cumulative time:"+acumTimeTaken);
-        System.out.println("Average time:"+avgTimeTaken);
+        
         System.out.println("Highest delta: "+delta);
         if(weightMatrix != null){
             System.out.println("Chosen matrix:");
-            for(int i = 0; i < 5; i++){
+            for(int i = 0; i < num_actions; i++){
                 for(int j = 0; j < 5; j++){
-                    System.out.print(String.format( "%.2f", weightMatrix[i][j])+" ");
+                    System.out.print(String.format( "%.2f", MCTS.weightMatrix[i][j])+" ");
                 }
                 System.out.println("");
             }
-        }
-        
-        System.exit(0);*/
-
+        }*/
+        //System.exit(0);
     }
 
     public SingleTreeNode treePolicy() {
 
         SingleTreeNode cur = this;
 
-        while (!cur.state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
-        {
+        while (!cur.state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH) {
             if (cur.notFullyExpanded()) {
                 return cur.expand();
 
@@ -118,7 +123,6 @@ public class SingleTreeNode
 
         return cur;
     }
-
 
     public SingleTreeNode expand() {
 
@@ -146,16 +150,14 @@ public class SingleTreeNode
 
         SingleTreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;
-        for (SingleTreeNode child : this.children)
-        {
+        for (SingleTreeNode child : this.children) {
             double hvVal = child.totValue;
-            double childValue =  hvVal / (child.nVisits + this.epsilon);
-
+            double childValue = hvVal / (child.nVisits + this.epsilon);
 
             childValue = Utils.normalise(childValue, bounds[0], bounds[1]);
 
-            double uctValue = childValue +
-                    K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
+            double uctValue = childValue
+                    + K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
 
             // small sampleRandom numbers: break ties in unexpanded nodes
             uctValue = Utils.noise(uctValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
@@ -167,8 +169,7 @@ public class SingleTreeNode
             }
         }
 
-        if (selected == null)
-        {
+        if (selected == null) {
             throw new RuntimeException("Warning! returning null: " + bestValue + " : " + this.children.length);
         }
 
@@ -177,20 +178,17 @@ public class SingleTreeNode
 
     public SingleTreeNode egreedy() {
 
-
         SingleTreeNode selected = null;
 
-        if(m_rnd.nextDouble() < egreedyEpsilon)
-        {
+        if (m_rnd.nextDouble() < egreedyEpsilon) {
             //Choose randomly
             int selectedIdx = m_rnd.nextInt(children.length);
             selected = this.children[selectedIdx];
 
-        }else{
+        } else {
             //pick the best Q.
             double bestValue = -Double.MAX_VALUE;
-            for (SingleTreeNode child : this.children)
-            {
+            for (SingleTreeNode child : this.children) {
                 double hvVal = child.totValue;
                 hvVal = Utils.noise(hvVal, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
                 // small sampleRandom numbers: break ties in unexpanded nodes
@@ -202,50 +200,48 @@ public class SingleTreeNode
 
         }
 
-
-        if (selected == null)
-        {
+        if (selected == null) {
             throw new RuntimeException("Warning! returning null: " + this.children.length);
         }
 
         return selected;
     }
 
-
-    public double rollOut()
-    {
+    public double rollOut() {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
-        
+
         // get a new mutated weight matrix     
         double[][] mutated_weightMatrix = MCTS.mutateWeightMatrix();
 
-        while (!finishRollout(rollerState,thisDepth)) {
-               
-            double[] features = queryState(rollerState);  
-            
+        while (!finishRollout(rollerState, thisDepth)) {
+
+            double[] features = queryState(rollerState);
+
             // use mutated matrix to calculate next action for the rollout
             int action = calculateAction(mutated_weightMatrix, features);
-            
+
             //int action = m_rnd.nextInt(num_actions);
-             
+            //System.out.println(action);
             rollerState.advance(actions[action]);
             thisDepth++;
         }
 
         double delta = value(rollerState);
-        
+
         // if the resulting delta gives best fitness, save the mutated matrix
-        if(delta > currentBestFitness){
+        if (delta > currentBestFitness) {
             currentBestFitness = delta;
             MCTS.weightMatrix = mutated_weightMatrix;
         }
 
-        if(delta < bounds[0])
+        if (delta < bounds[0]) {
             bounds[0] = delta;
+        }
 
-        if(delta > bounds[1])
+        if (delta > bounds[1]) {
             bounds[1] = delta;
+        }
 
         return delta;
     }
@@ -256,37 +252,39 @@ public class SingleTreeNode
         Types.WINNER win = a_gameState.getGameWinner();
         double rawScore = a_gameState.getGameScore();
 
-        if(gameOver && win == Types.WINNER.PLAYER_LOSES)
+        if (gameOver && win == Types.WINNER.PLAYER_LOSES) {
             rawScore += HUGE_NEGATIVE;
+        }
 
-        if(gameOver && win == Types.WINNER.PLAYER_WINS)
+        if (gameOver && win == Types.WINNER.PLAYER_WINS) {
             rawScore += HUGE_POSITIVE;
+        }
 
         return rawScore;
     }
 
-    public boolean finishRollout(StateObservation rollerState, int depth)
-    {
-        if(depth >= ROLLOUT_DEPTH)      //rollout end condition.
+    public boolean finishRollout(StateObservation rollerState, int depth) {
+        if (depth >= ROLLOUT_DEPTH) //rollout end condition.
+        {
             return true;
+        }
 
-        if(rollerState.isGameOver())               //end of game
+        if (rollerState.isGameOver()) //end of game
+        {
             return true;
+        }
 
         return false;
     }
 
-    public void backUp(SingleTreeNode node, double result)
-    {
+    public void backUp(SingleTreeNode node, double result) {
         SingleTreeNode n = node;
-        while(n != null)
-        {
+        while (n != null) {
             n.nVisits++;
             n.totValue += result;
             n = n.parent;
         }
     }
-
 
     public int mostVisitedAction() {
         int selected = -1;
@@ -294,14 +292,12 @@ public class SingleTreeNode
         boolean allEqual = true;
         double first = -1;
 
-        for (int i=0; i<children.length; i++) {
+        for (int i = 0; i < children.length; i++) {
 
-            if(children[i] != null)
-            {
-                if(first == -1)
+            if (children[i] != null) {
+                if (first == -1) {
                     first = children[i].nVisits;
-                else if(first != children[i].nVisits)
-                {
+                } else if (first != children[i].nVisits) {
                     allEqual = false;
                 }
 
@@ -314,26 +310,23 @@ public class SingleTreeNode
             }
         }
 
-        if (selected == -1)
-        {
+        if (selected == -1) {
             System.out.println("Unexpected selection!");
             selected = 0;
-        }else if(allEqual)
-        {
+        } else if (allEqual) {
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
         return selected;
     }
 
-    public int bestAction()
-    {
+    public int bestAction() {
         int selected = -1;
         double bestValue = -Double.MAX_VALUE;
 
-        for (int i=0; i<children.length; i++) {
+        for (int i = 0; i < children.length; i++) {
 
-            if(children[i] != null) {
+            if (children[i] != null) {
                 double childValue = children[i].totValue / (children[i].nVisits + this.epsilon);
                 childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
                 if (childValue > bestValue) {
@@ -343,15 +336,13 @@ public class SingleTreeNode
             }
         }
 
-        if (selected == -1)
-        {
+        if (selected == -1) {
             System.out.println("Unexpected selection!");
             selected = 0;
         }
 
         return selected;
     }
-
 
     public boolean notFullyExpanded() {
         for (SingleTreeNode tn : children) {
@@ -362,22 +353,21 @@ public class SingleTreeNode
 
         return false;
     }
-    
-    
-    public double[] queryState(StateObservation stateObs){
+
+    public double[] queryState(StateObservation stateObs) {
         Vector2d position = stateObs.getAvatarPosition();
         //System.out.println("Got possition! "+position.toString());
-        
+
         double[] features = new double[5];
-        
+
         ArrayList<Observation>[] observationLists = stateObs.getNPCPositions(position);
         // If there is NPCs on this game
 
-        if (observationLists != null){
+        if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" NPC Types =====");
             for (ArrayList<Observation> list : observationLists) {
-                if(!list.isEmpty()){
-                    System.out.println("Type 1: "+list.size()+" ocurrences");
+                if (!list.isEmpty()) {
+                    //System.out.println("Type 1: "+list.size()+" ocurrences");
                     //for(int i = 0; i < list.size(); i++){
                     //    Observation obs = list.get(i);
                     Observation obs = list.get(0);
@@ -393,15 +383,15 @@ public class SingleTreeNode
 
         // If there is Immovable on this game
         observationLists = stateObs.getImmovablePositions(position);
-        if (observationLists != null){
+        if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" Immovable Types =====");
             for (ArrayList<Observation> list : observationLists) {
-                if(!list.isEmpty()){
+                if (!list.isEmpty()) {
                     //System.out.println("Type 1: "+list.size()+" ocurrences");
                     Observation obs = list.get(0);
                     features[1] = obs.sqDist;
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
-                    
+
                 }
                 break;
             }
@@ -409,10 +399,10 @@ public class SingleTreeNode
 
         // If there is Movable on this game
         observationLists = stateObs.getMovablePositions(position);
-        if (observationLists != null){
+        if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" Movable Types =====");
             for (ArrayList<Observation> list : observationLists) {
-                if(!list.isEmpty()){
+                if (!list.isEmpty()) {
                     //System.out.println("Type 1: "+list.size()+" ocurrences");
                     Observation obs = list.get(0);
                     features[2] = obs.sqDist;
@@ -421,13 +411,13 @@ public class SingleTreeNode
                 break;
             }
         }
-        
+
         // If there is Resources on this game
         observationLists = stateObs.getResourcesPositions(position);
-        if (observationLists != null){
+        if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" Resource Types =====");
             for (ArrayList<Observation> list : observationLists) {
-                if(!list.isEmpty()){
+                if (!list.isEmpty()) {
                     //System.out.println("Type 1: "+list.size()+" ocurrences");
                     Observation obs = list.get(0);
                     features[3] = obs.sqDist;
@@ -436,46 +426,88 @@ public class SingleTreeNode
                 break;
             }
         }
-        
+
         // If there is Portals on this game
         observationLists = stateObs.getPortalsPositions(position);
-        if (observationLists != null){
+        if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" Portal Types =====");
             for (ArrayList<Observation> list : observationLists) {
-                if(!list.isEmpty()){
+                if (!list.isEmpty()) {
                     //System.out.println("Type 1: "+list.size()+" ocurrences");
                     Observation obs = list.get(0);
                     features[4] = obs.sqDist;
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
-                    
+
                 }
                 break;
             }
         }
-        
+
         return features;
-        
+
     }
-    
-    public int calculateAction(double[][] weightMatrix, double[] features){
-        
-        double[] strenght = new double[5];
-        for(int i = 0; i < 5; i++){
-            strenght[i] = 0;
-        }
-        
-        for(int i = 0; i < 5; i++){
-            for(int j = 0; j < 5; j++){
-                strenght[j] += weightMatrix[i][j] * features[j];
+
+    public int calculateAction(double[][] weightMatrix, double[] features) {
+
+        /*if (weightMatrix != null) {
+            System.out.println("Mutated matrix:");
+            for (int i = 0; i < num_actions; i++) {
+                for (int j = 0; j < 5; j++) {
+                    System.out.print(String.format("%.2f", MCTS.weightMatrix[i][j]) + " ");
+                }
+                System.out.println("");
             }
         }
-        
-        int stronghest = 0;
-        for(int i = 1; i < 5; i++){
-            if(strenght[i] > strenght[stronghest])
-                stronghest = i;
+
+        System.out.println("Features:");
+        for (int j = 0; j < 5; j++) {
+            System.out.println(j + ": " + features[j]);
+        }*/
+
+        double[] strenght = new double[num_actions];
+        double sum = 0;
+
+        for (int i = 0; i < num_actions; i++) {
+            strenght[i] = 0;
+            for (int j = 0; j < 5; j++) {
+                strenght[i] += weightMatrix[i][j] * features[j];
+            }
+            sum += strenght[i];
         }
         
-        return stronghest;
+        RandomCollection<Integer> rnd = new RandomCollection<>();
+        
+        for (int i = 0; i < num_actions; i++) {
+            rnd.add(strenght[i]/sum, i);
+        }
+        
+      
+        return rnd.next();
+
+
+    }
+    
+    /*
+    * @Author ronen
+    * Source: http://stackoverflow.com/questions/6409652/random-weighted-selection-in-java
+    */
+
+    public class RandomCollection<E> {
+
+        private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
+        private double total = 0;
+
+        public void add(double weight, E result) {
+            if (weight <= 0 || map.containsValue(result)) {
+                return;
+            }
+            total += weight;
+            map.put(total, result);
+        }
+
+        public E next() {
+            double value = ThreadLocalRandom.current().nextDouble() * total;
+            return map.ceilingEntry(value).getValue();
+        }
     }
 }

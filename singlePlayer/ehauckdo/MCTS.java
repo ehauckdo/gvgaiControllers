@@ -14,9 +14,10 @@ public class MCTS extends CustomController {
 
     public SingleTreeNode m_root;
     public static double[][] weightMatrix;
+   
 
     public static Random m_rnd;
-    public int num_actions;
+    public static int num_actions;
     Types.ACTIONS[] actions;
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
@@ -47,23 +48,23 @@ public class MCTS extends CustomController {
     }
     
     public static void initializeWeightMatrix(){
-        weightMatrix = new double[5][5];
-        for(int i = 0; i < 5; i++)
+        weightMatrix = new double[num_actions][5];
+        for(int i = 0; i < num_actions; i++)
             for(int j = 0; j < 5; j++){
                 weightMatrix[i][j] = m_rnd.nextDouble();
             }
     }
     
     public static double[][] mutateWeightMatrix(){
-        double[][] mutated_weightMatrix = new double[5][5];
-        for(int i = 0; i < 5; i++)
+        double[][] mutated_weightMatrix = new double[num_actions][5];
+        for(int i = 0; i < num_actions; i++)
             System.arraycopy(weightMatrix[i], 0, mutated_weightMatrix[i], 0, 5);
         
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(5)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
+        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
         
         return mutated_weightMatrix;
     }
