@@ -6,6 +6,8 @@ import core.game.Observation;
 import core.game.StateObservation;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,13 +35,12 @@ public class SingleTreeNode {
     private int m_depth;
     public int num_actions;
 
-    public double currentBestFitness = 0;
-    double[][] weightMatrix = new double[5][5];
+    //double[][] weightMatrix = new double[5][5];
 
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public double K = Math.sqrt(2);
     public int iterations = 0;
-
+  
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
     }
@@ -70,6 +71,8 @@ public class SingleTreeNode {
         int remainingLimit = 5;
 
         double delta = 0;
+        MCTS.num_evolutions = 0;
+        
 
         while (remaining > 2 * avgTimeTaken && remaining > remainingLimit) {
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
@@ -87,14 +90,16 @@ public class SingleTreeNode {
             iterations++;
         }
 
-        System.out.println("Iterations: " + iterations);
-        System.out.println("Average time:" + avgTimeTaken);
+        System.out.println("Iterations: " + iterations+", Evolved: "+MCTS.num_evolutions);
+        
+        
 
         /*
+        System.out.println("Average time:" + avgTimeTaken);
         System.out.println("Cumulative time:"+acumTimeTaken);
         
-        System.out.println("Highest delta: "+delta);
-        if(weightMatrix != null){
+        System.out.println("Highest delta: "+delta);*/
+        /*if(weightMatrix != null){
             System.out.println("Chosen matrix:");
             for(int i = 0; i < num_actions; i++){
                 for(int j = 0; j < 5; j++){
@@ -211,15 +216,17 @@ public class SingleTreeNode {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
 
-        // get a new mutated weight matrix     
-        double[][] mutated_weightMatrix = MCTS.mutateWeightMatrix();
-
+        HashMap<Integer, featureWeight> mutated_weightHashMap = null;
+         
         while (!finishRollout(rollerState, thisDepth)) {
 
             double[] features = queryState(rollerState);
-
+            
+            // get a new mutated weight matrix 
+            mutated_weightHashMap = MCTS.mutateWeightMatrix();
+            
             // use mutated matrix to calculate next action for the rollout
-            int action = calculateAction(mutated_weightMatrix, features);
+            int action = calculateAction(mutated_weightHashMap, features);
 
             //int action = m_rnd.nextInt(num_actions);
             //System.out.println(action);
@@ -230,9 +237,15 @@ public class SingleTreeNode {
         double delta = value(rollerState);
 
         // if the resulting delta gives best fitness, save the mutated matrix
-        if (delta > currentBestFitness) {
-            currentBestFitness = delta;
-            MCTS.weightMatrix = mutated_weightMatrix;
+        if (delta > MCTS.current_bestFitness) {
+            MCTS.num_evolutions += 1;
+            MCTS.current_bestFitness = delta;
+            MCTS.weightHashMap = mutated_weightHashMap;
+            
+            for(Integer i: mutated_weightHashMap.keySet()){
+                System.out.println(i+": "+mutated_weightHashMap.get(i).weight);
+            }
+            
         }
 
         if (delta < bounds[0]) {
@@ -359,23 +372,30 @@ public class SingleTreeNode {
         //System.out.println("Got possition! "+position.toString());
 
         double[] features = new double[5];
+        HashMap<Integer, Double> new_features = new HashMap<>();
+        List<Integer> current_features = new ArrayList<>();
+        
+        MCTS.current_features.clear();
 
         ArrayList<Observation>[] observationLists = stateObs.getNPCPositions(position);
+        
         // If there is NPCs on this game
-
         if (observationLists != null) {
-            //System.out.println("===== "+ observationLists.length +" NPC Types =====");
+
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
-                    //System.out.println("Type 1: "+list.size()+" ocurrences");
-                    //for(int i = 0; i < list.size(); i++){
-                    //    Observation obs = list.get(i);
-                    Observation obs = list.get(0);
-                    features[0] = obs.sqDist;
+
+                    Observation obs = list.get(0);      
+                    featureWeight weight = MCTS.weightHashMap.get(obs.itype);
+                    if(weight == null)
+                        weight = new featureWeight(obs.sqDist);
+                    else
+                        weight.distance = obs.sqDist;
+                    
+                    MCTS.weightHashMap.put(obs.itype, weight);
+                    MCTS.current_features.add(obs.itype);
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
-                    //System.out.println("Distance: "+obs.sqDist);
-                    //    break;
-                    //}
+
                 }
                 break;
             }
@@ -387,9 +407,16 @@ public class SingleTreeNode {
             //System.out.println("===== "+ observationLists.length +" Immovable Types =====");
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
-                    //System.out.println("Type 1: "+list.size()+" ocurrences");
+
                     Observation obs = list.get(0);
-                    features[1] = obs.sqDist;
+                    featureWeight weight = MCTS.weightHashMap.get(obs.itype);
+                    if(weight == null)
+                        weight = new featureWeight(obs.sqDist);
+                    else
+                        weight.distance = obs.sqDist;
+                    
+                    MCTS.weightHashMap.put(obs.itype, weight);
+                    MCTS.current_features.add(obs.itype);
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
 
                 }
@@ -403,9 +430,16 @@ public class SingleTreeNode {
             //System.out.println("===== "+ observationLists.length +" Movable Types =====");
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
-                    //System.out.println("Type 1: "+list.size()+" ocurrences");
+
                     Observation obs = list.get(0);
-                    features[2] = obs.sqDist;
+                    featureWeight weight = MCTS.weightHashMap.get(obs.itype);
+                    if(weight == null)
+                        weight = new featureWeight(obs.sqDist);
+                    else
+                        weight.distance = obs.sqDist;
+                    
+                    MCTS.weightHashMap.put(obs.itype, weight);
+                    MCTS.current_features.add(obs.itype);
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
                 }
                 break;
@@ -418,9 +452,16 @@ public class SingleTreeNode {
             //System.out.println("===== "+ observationLists.length +" Resource Types =====");
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
-                    //System.out.println("Type 1: "+list.size()+" ocurrences");
+
                     Observation obs = list.get(0);
-                    features[3] = obs.sqDist;
+                    featureWeight weight = MCTS.weightHashMap.get(obs.itype);
+                    if(weight == null)
+                        weight = new featureWeight(obs.sqDist);
+                    else
+                        weight.distance = obs.sqDist;
+                    
+                    MCTS.weightHashMap.put(obs.itype, weight);
+                    MCTS.current_features.add(obs.itype);
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
                 }
                 break;
@@ -433,9 +474,16 @@ public class SingleTreeNode {
             //System.out.println("===== "+ observationLists.length +" Portal Types =====");
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
-                    //System.out.println("Type 1: "+list.size()+" ocurrences");
+ 
                     Observation obs = list.get(0);
-                    features[4] = obs.sqDist;
+                    featureWeight weight = MCTS.weightHashMap.get(obs.itype);
+                    if(weight == null)
+                        weight = new featureWeight(obs.sqDist);
+                    else
+                        weight.distance = obs.sqDist;
+                    
+                    MCTS.weightHashMap.put(obs.itype, weight);
+                    MCTS.current_features.add(obs.itype);
                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
 
                 }
@@ -447,30 +495,16 @@ public class SingleTreeNode {
 
     }
 
-    public int calculateAction(double[][] weightMatrix, double[] features) {
-
-        /*if (weightMatrix != null) {
-            System.out.println("Mutated matrix:");
-            for (int i = 0; i < num_actions; i++) {
-                for (int j = 0; j < 5; j++) {
-                    System.out.print(String.format("%.2f", MCTS.weightMatrix[i][j]) + " ");
-                }
-                System.out.println("");
-            }
-        }
-
-        System.out.println("Features:");
-        for (int j = 0; j < 5; j++) {
-            System.out.println(j + ": " + features[j]);
-        }*/
+    public int calculateAction(HashMap<Integer, featureWeight> weightMatrix, double[] features) {
 
         double[] strenght = new double[num_actions];
         double sum = 0;
-
-        for (int i = 0; i < num_actions; i++) {
+ 
+        for(int i = 0; i < num_actions; i++){
             strenght[i] = 0;
-            for (int j = 0; j < 5; j++) {
-                strenght[i] += weightMatrix[i][j] * features[j];
+            for(Integer j: MCTS.current_features){
+                featureWeight weight = weightMatrix.get(j);
+                strenght[i] += weight.distance * weight.weight;
             }
             sum += strenght[i];
         }

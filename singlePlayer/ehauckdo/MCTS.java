@@ -1,7 +1,10 @@
 package controllers.singlePlayer.ehauckdo;
 
 import core.game.StateObservation;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
+import java.util.Set;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 
@@ -15,9 +18,15 @@ public class MCTS extends CustomController {
     public SingleTreeNode m_root;
     public static double[][] weightMatrix;
    
-
     public static Random m_rnd;
     public static int num_actions;
+    public static int num_evolutions;
+    public static double current_bestFitness;
+    public static HashMap<Integer, Double> features = new HashMap<>();
+    public static ArrayList<Integer> current_features = new ArrayList<>();
+    public static HashMap<Integer, featureWeight> weightHashMap = new HashMap<>();
+    
+    
     Types.ACTIONS[] actions;
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
@@ -25,7 +34,6 @@ public class MCTS extends CustomController {
         this.num_actions = num_actions;
         this.actions = actions;
         m_rnd = a_rnd;
-        initializeWeightMatrix();
         
     }  
     
@@ -46,27 +54,21 @@ public class MCTS extends CustomController {
     public boolean switchController() {
         return false;
     }
-    
-    public static void initializeWeightMatrix(){
-        weightMatrix = new double[num_actions][5];
-        for(int i = 0; i < num_actions; i++)
-            for(int j = 0; j < 5; j++){
-                weightMatrix[i][j] = m_rnd.nextDouble();
-            }
+
+    public static HashMap<Integer, featureWeight> mutateWeightMatrix(){
+        
+        HashMap<Integer, featureWeight> mutated_weightHashMap = new HashMap<>();
+        
+        for(Integer featureId: weightHashMap.keySet()){
+            featureWeight weight = weightHashMap.get(featureId);
+            featureWeight mutated_weight = new featureWeight(weight.distance, weight.weight);
+            if(m_rnd.nextFloat() > 0.8)
+                    mutated_weight.weight += m_rnd.nextGaussian()*0.1;
+            mutated_weightHashMap.put(featureId, mutated_weight);
+        }
+        
+        return mutated_weightHashMap;
     }
     
-    public static double[][] mutateWeightMatrix(){
-        double[][] mutated_weightMatrix = new double[num_actions][5];
-        for(int i = 0; i < num_actions; i++)
-            System.arraycopy(weightMatrix[i], 0, mutated_weightMatrix[i], 0, 5);
-        
-        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        weightMatrix[m_rnd.nextInt(num_actions)][m_rnd.nextInt(5)] = m_rnd.nextDouble();
-        
-        return mutated_weightMatrix;
-    }
 
 }
