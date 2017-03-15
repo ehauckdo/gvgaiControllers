@@ -1,5 +1,6 @@
 package controllers.singlePlayer.ehauckdo;
 
+import controllers.singlePlayer.ehauckdo.structures.featureWeight;
 import java.util.Random;
 
 import core.game.Observation;

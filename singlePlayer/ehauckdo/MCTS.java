@@ -1,5 +1,6 @@
 package controllers.singlePlayer.ehauckdo;
 
+import controllers.singlePlayer.ehauckdo.structures.featureWeight;
 import core.game.StateObservation;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,8 +26,7 @@ public class MCTS extends CustomController {
     public static HashMap<Integer, Double> features = new HashMap<>();
     public static ArrayList<Integer> current_features = new ArrayList<>();
     public static HashMap<Integer, featureWeight> weightHashMap = new HashMap<>();
-    
-    
+      
     Types.ACTIONS[] actions;
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
