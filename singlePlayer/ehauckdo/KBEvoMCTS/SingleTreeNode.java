@@ -88,6 +88,13 @@ public class SingleTreeNode {
         }
 
         System.out.println("Iterations: " + iterations+", Evolved: "+MCTS.num_evolutions);
+        System.out.println("Selected MAtrix:");
+        MCTS.weightMatrix.printMatrix();
+        /*for(weightMatrix matrix : MCTS.mutated_matrixList){
+            matrix.printMatrix();
+            System.out.println("");
+        }
+        System.exit(0);*/
         
         /*
         System.out.println("Average time:" + avgTimeTaken);
@@ -227,6 +234,9 @@ public class SingleTreeNode {
         
         // update fitness value of the current matrix
         mutated_weightmatrix.fitness = delta;
+        MCTS.matrix_collection.add(delta, mutated_weightmatrix);
+        
+        //System.out.println("Number of matrixes: "+MCTS.mutated_matrixList.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix
         if (delta > MCTS.current_bestFitness) {
@@ -524,27 +534,4 @@ public class SingleTreeNode {
 
     }
     
-    /*
-    * @Author ronen
-    * Source: http://stackoverflow.com/questions/6409652/random-weighted-selection-in-java
-    */
-
-    public class RandomCollection<E> {
-
-        private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
-        private double total = 0;
-
-        public void add(double weight, E result) {
-            if (weight <= 0 || map.containsValue(result)) {
-                return;
-            }
-            total += weight;
-            map.put(total, result);
-        }
-
-        public E next() {
-            double value = ThreadLocalRandom.current().nextDouble() * total;
-            return map.ceilingEntry(value).getValue();
-        }
-    }
 }

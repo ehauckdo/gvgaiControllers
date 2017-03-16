@@ -1,6 +1,5 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -31,6 +30,7 @@ public class weightMatrix {
         for (int i = 0; i < num_actions; i++) {
             actionHashMap[i] = new HashMap<>();
         }
+        // make sure we deep copy values
         for (Integer i : features.keySet()) {
             this.mapped_features.put(new Integer(i), new Double(features.get(i)));
         }
@@ -73,10 +73,6 @@ public class weightMatrix {
             }
         }
         return mutatedWeightMatrix;
-    }
-
-    public boolean isMapped(int feature_id) {
-        return mapped_features.get(feature_id) != null;
     }
 
     public void updateMapping(HashMap<Integer, Double> features) {
