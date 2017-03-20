@@ -50,6 +50,7 @@ public class MCTS extends CustomController {
         if (!matrix_collection.isEmpty()) {
             //System.out.println("Sampling from collection.");
             weightMatrix = matrix_collection.next();
+            current_bestFitness = weightMatrix.fitness;
             matrix_collection.clear();
             /*System.out.println("Chosen:");
             weightMatrix.printMatrix();*/

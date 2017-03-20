@@ -88,8 +88,8 @@ public class SingleTreeNode {
         }
 
         System.out.println("Iterations: " + iterations+", Evolved: "+MCTS.num_evolutions);
-        System.out.println("Selected MAtrix:");
-        MCTS.weightMatrix.printMatrix();
+        /*System.out.println("Selected MAtrix:");
+        MCTS.weightMatrix.printMatrix();*/
         /*for(weightMatrix matrix : MCTS.mutated_matrixList){
             matrix.printMatrix();
             System.out.println("");
