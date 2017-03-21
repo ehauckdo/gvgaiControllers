@@ -48,12 +48,9 @@ public class MCTS extends CustomController {
 
         // Sample from all the mutated matrices and choose 1 to keep stored
         if (!matrix_collection.isEmpty()) {
-            //System.out.println("Sampling from collection.");
-            weightMatrix = matrix_collection.next();
-            current_bestFitness = weightMatrix.fitness;
-            matrix_collection.clear();
-            /*System.out.println("Chosen:");
-            weightMatrix.printMatrix();*/
+            
+            simpleSample();
+            //differentialEvolution();
         }
         
         //Determine the best action to take and return it.
@@ -65,7 +62,29 @@ public class MCTS extends CustomController {
     public boolean switchController() {
         return false;
     }
+    
+    public static void simpleSample(){
+        //System.out.println("Sampling from collection.");
+        weightMatrix = matrix_collection.next();
+        current_bestFitness = weightMatrix.fitness;
+        matrix_collection.clear();
+        /*System.out.println("Chosen:");
+        weightMatrix.printMatrix();*/
+    }
+    
+    public static void differentialEvolution(){
+        /*weightMatrix best = weightMatrix;
+        weightMatrix sample1 = matrix_collection.next();
+        weightMatrix sample2 = matrix_collection.next();*/
+        
+        /*for(Integer i :sample1.mapped_features.keySet()){
+            System.out.println(i);
+        }
+        for(Integer i :sample2.mapped_features.keySet()){
+            System.out.println(i);
+        }*/    
 
- 
-
+    }
+   
+    
 }

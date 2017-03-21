@@ -10,11 +10,11 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class RandomCollection<E> {
 
-    private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
+    public final NavigableMap<Double, E> map = new TreeMap<Double, E>();
     private double total = 0;
 
     public void add(double weight, E result) {
-        if (weight <= 0 || map.containsValue(result)) {
+        if (map.containsValue(result)) {
             return;
         }
         total += weight;
@@ -33,6 +33,10 @@ public class RandomCollection<E> {
     
     public boolean isEmpty(){
         return map.isEmpty();
+    }
+    
+    public int size(){
+        return map.size();
     }
     
 }

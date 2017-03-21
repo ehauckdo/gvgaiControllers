@@ -19,7 +19,7 @@ public class SingleTreeNode {
 
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
-    public final int ROLLOUT_DEPTH = 10;
+    public final int ROLLOUT_DEPTH = 20;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
     public Random m_rnd;
@@ -232,11 +232,10 @@ public class SingleTreeNode {
         
         double delta = value(rollerState);
         
-        // update fitness value of the current matrix
-        mutated_weightmatrix.fitness = delta;
-        MCTS.matrix_collection.add(delta, mutated_weightmatrix);
-        
-        //System.out.println("Number of matrixes: "+MCTS.mutated_matrixList.size());
+        // update fitness value of the current matrix, add noise to break ties
+        mutated_weightmatrix.fitness = Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
+        MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
+        System.out.println("Size:"+MCTS.matrix_collection.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix
         if (delta > MCTS.current_bestFitness) {
@@ -492,6 +491,7 @@ public class SingleTreeNode {
         double[] strenght = new double[num_actions];
         double sum = 0;
         
+        return 0;
  
         /*for(int i = 0; i < num_actions; i++){
             strenght[i] = 0;
@@ -511,9 +511,9 @@ public class SingleTreeNode {
                 }
                 sum += strenght[i];
             }
-        }*/
+        }
         
-        for(int action_id = 0; action_id < num_actions; action_id++){
+        /*for(int action_id = 0; action_id < num_actions; action_id++){
             strenght[action_id] = 0;
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
             for(Integer feature_id: MCTS.current_features.keySet()){
@@ -529,7 +529,7 @@ public class SingleTreeNode {
         }
         
       
-        return rnd.next();
+        return rnd.next();*/
 
 
     }
