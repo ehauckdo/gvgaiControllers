@@ -235,7 +235,7 @@ public class SingleTreeNode {
         // update fitness value of the current matrix, add noise to break ties
         mutated_weightmatrix.fitness = Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
         MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
-        System.out.println("Size:"+MCTS.matrix_collection.size());
+        //System.out.println("Size:"+MCTS.matrix_collection.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix
         if (delta > MCTS.current_bestFitness) {
