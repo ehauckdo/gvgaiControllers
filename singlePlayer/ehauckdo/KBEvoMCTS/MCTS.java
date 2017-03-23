@@ -1,21 +1,14 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
 import controllers.singlePlayer.ehauckdo.CustomController;
-import controllers.singlePlayer.ehauckdo.KBEvoMCTS.weightMatrix;
 import core.game.Event;
-import core.game.Observation;
 import core.game.StateObservation;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
-import java.util.TreeSet;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
-import tools.GameAnalyzer;
-import util.Util;
 
 /**
  *
@@ -38,6 +31,7 @@ public class MCTS extends CustomController {
     public static KnowledgeBase knowledgeBase = new KnowledgeBase();
     public static double lastScore = 0;
     public static ArrayList<Integer> knownSprites = new ArrayList<>();
+    public static int lastKnownEvent = -1;
 
     Types.ACTIONS[] actions;
 
@@ -103,14 +97,27 @@ public class MCTS extends CustomController {
     }
 
     private void buildKnowledgeBase(StateObservation stateObs) {
-        knowledgeBase.clear();
-        Iterator<Event> events = stateObs.getEventsHistory().iterator();
-        while(events.hasNext()){
-            Event e = events.next();
-            knowledgeBase.add(e.activeTypeId, e.passiveTypeId, stateObs.getGameScore()-lastScore);
-        }
         
-        //knowledgeBase.printKnowledgeBase();
+        // if there are no events, just return
+        if(stateObs.getEventsHistory().isEmpty())
+            return;
+        
+        Iterator<Event> events = stateObs.getEventsHistory().iterator();
+        int event_index = -1;
+        
+        // Save to the knowledge base only new events happened in the previous
+        // step of the game
+        while(events.hasNext()){
+            event_index += 1;
+            Event e = events.next();
+            if(event_index > lastKnownEvent){
+                knowledgeBase.add(e.activeTypeId, e.passiveTypeId, stateObs.getGameScore()-lastScore);
+            }
+        }
+        lastKnownEvent = event_index;
+        
+        knowledgeBase.printKnowledgeBase();
+        //System.out.println(event_index+", "+lastKnownEvent);
         //if(knowledgeBase.events.size() > 10){
         //    System.out.println(stateObs.getAvatarType());
         //    System.exit(0);
