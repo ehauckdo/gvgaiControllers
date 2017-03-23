@@ -111,12 +111,13 @@ public class MCTS extends CustomController {
             event_index += 1;
             Event e = events.next();
             if(event_index > lastKnownEvent){
-                knowledgeBase.add(e.activeTypeId, e.passiveTypeId, stateObs.getGameScore()-lastScore);
+                if(current_features.containsKey(e.passiveTypeId))
+                    knowledgeBase.add(e.activeTypeId, e.passiveTypeId, stateObs.getGameScore()-lastScore);
             }
         }
         lastKnownEvent = event_index;
         
-        knowledgeBase.printKnowledgeBase();
+        //knowledgeBase.printKnowledgeBase();
         //System.out.println(event_index+", "+lastKnownEvent);
         //if(knowledgeBase.events.size() > 10){
         //    System.out.println(stateObs.getAvatarType());

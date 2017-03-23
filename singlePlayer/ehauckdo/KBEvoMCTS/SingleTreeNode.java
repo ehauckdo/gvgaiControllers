@@ -387,7 +387,7 @@ public class SingleTreeNode {
                     
                     MCTS.weightHashMap.put(obs.itype, weight);*/
                     MCTS.current_features.put(obs.itype, obs.sqDist);
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
+                    //if(print) System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
 
                 }
                 break;
@@ -395,13 +395,13 @@ public class SingleTreeNode {
         }
 
         // If there is Immovable on this game
-        observationLists = stateObs.getImmovablePositions(position);
-        if (observationLists != null) {
+        //observationLists = stateObs.getImmovablePositions(position);
+        //if (observationLists != null) {
             //System.out.println("===== "+ observationLists.length +" Immovable Types =====");
-            for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
+        //    for (ArrayList<Observation> list : observationLists) {
+        //        if (!list.isEmpty()) {
 
-                    Observation obs = list.get(0);
+        //            Observation obs = list.get(0);
                     /*featureWeight weight = MCTS.weightHashMap.get(obs.itype);
                     if(weight == null)
                         weight = new featureWeight(obs.sqDist);
@@ -409,13 +409,13 @@ public class SingleTreeNode {
                         weight.distance = obs.sqDist;
                     
                     MCTS.weightHashMap.put(obs.itype, weight);*/
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
+        //            MCTS.current_features.put(obs.itype, obs.sqDist);
+        //            if(print) System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
 
-                }
-                break;
-            }
-        }
+        //        }
+        //        break;
+        //    }
+        //}
 
         // If there is Movable on this game
         observationLists = stateObs.getMovablePositions(position);
@@ -433,7 +433,7 @@ public class SingleTreeNode {
                     
                     MCTS.weightHashMap.put(obs.itype, weight);*/
                     MCTS.current_features.put(obs.itype, obs.sqDist);
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
+                    //if(print) System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
                 }
                 break;
             }
@@ -455,7 +455,7 @@ public class SingleTreeNode {
                     
                     MCTS.weightHashMap.put(obs.itype, weight);*/
                     MCTS.current_features.put(obs.itype, obs.sqDist);
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
+                    //if(print) System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
                 }
                 break;
             }
@@ -479,12 +479,12 @@ public class SingleTreeNode {
                     MCTS.current_features.put(obs.itype, obs.sqDist);
                     
                     
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype);
+                    //if(print) System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
 
                 }
                 break;
             }
-        }
+        } 
 
     }
 
