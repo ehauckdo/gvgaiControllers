@@ -232,9 +232,11 @@ public class SingleTreeNode {
         
         double delta = value(rollerState);
         
-        // update fitness value of the current matrix, add noise to break ties
-        mutated_weightmatrix.fitness = Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
-        MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
+        // if delta is not very low (game over && player lost), save mutated matrix
+        if(delta > 0){
+            mutated_weightmatrix.fitness = delta;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
+            MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
+        }
         //System.out.println("Size:"+MCTS.matrix_collection.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix

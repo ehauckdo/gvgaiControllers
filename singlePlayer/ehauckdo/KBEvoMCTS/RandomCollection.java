@@ -1,11 +1,13 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
+import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /*
-    * @Author ronen
+    * @Author Peter Lawrey
     * Source: http://stackoverflow.com/questions/6409652/random-weighted-selection-in-java
  */
 public class RandomCollection<E> {

@@ -3,15 +3,18 @@ package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 import controllers.singlePlayer.ehauckdo.CustomController;
 import controllers.singlePlayer.ehauckdo.KBEvoMCTS.weightMatrix;
 import core.game.Event;
+import core.game.Observation;
 import core.game.StateObservation;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.TreeSet;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
+import tools.GameAnalyzer;
 import util.Util;
 
 /**
@@ -31,6 +34,10 @@ public class MCTS extends CustomController {
     public static weightMatrix weightMatrix;
 
     public static RandomCollection<weightMatrix> matrix_collection = new RandomCollection<>();
+    
+    public static KnowledgeBase knowledgeBase = new KnowledgeBase();
+    public static double lastScore = 0;
+    public static ArrayList<Integer> knownSprites = new ArrayList<>();
 
     Types.ACTIONS[] actions;
 
@@ -39,11 +46,13 @@ public class MCTS extends CustomController {
         this.actions = actions;
         m_rnd = a_rnd;
         weightMatrix = new weightMatrix(num_actions);
+        
     }
 
     @Override
-    public Types.ACTIONS act(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) {
+    public Types.ACTIONS act(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) { 
         
+        buildKnowledgeBase(stateObs);
         
         //Set the game observation to a newly root node.
         m_root = new SingleTreeNode(stateObs, m_rnd, num_actions, actions);
@@ -58,6 +67,8 @@ public class MCTS extends CustomController {
             //differentialEvolution();
         }
         
+        lastScore = stateObs.getGameScore();
+        
         //Determine the best action to take and return it.
         int action = m_root.mostVisitedAction();
         return actions[action];
@@ -69,7 +80,7 @@ public class MCTS extends CustomController {
     }
     
     public static void simpleSample(){
-        //System.out.println("Sampling from collection.");
+        //System.out.println("Sampling from collection of "+matrix_collection.map.size()+" matrices"); 
         weightMatrix = matrix_collection.next();
         current_bestFitness = weightMatrix.fitness;
         matrix_collection.clear();
@@ -90,8 +101,32 @@ public class MCTS extends CustomController {
         }*/    
 
     }
+
+    private void buildKnowledgeBase(StateObservation stateObs) {
+        knowledgeBase.clear();
+        Iterator<Event> events = stateObs.getEventsHistory().iterator();
+        while(events.hasNext()){
+            Event e = events.next();
+            knowledgeBase.add(e.activeTypeId, e.passiveTypeId, stateObs.getGameScore()-lastScore);
+        }
+        
+        //knowledgeBase.printKnowledgeBase();
+        //if(knowledgeBase.events.size() > 10){
+        //    System.out.println(stateObs.getAvatarType());
+        //    System.exit(0);
+        //}
+    }
     
-    
+    public void querySprites(StateObservation stateObs){
+        knownSprites.clear();
+        
+        /*ArrayList<Observation>[] resources = stateObs.getResourcesPositions();
+        for (ArrayList<Observation> resource : resources) {
+            for(Observation obs : resource){
+                knownSprites.add(obs.)
+            }
+        }*/
+    }
    
     
 }

@@ -1,5 +1,6 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
+import core.game.GameDescription;
 import java.util.HashMap;
 
 /**
@@ -10,7 +11,7 @@ public class KnowledgeBase {
 
     HashMap<Integer, EventRecord> events = new HashMap();
      
-    public void add(int actSpriteId, int pasSpriteId, int scoreChange){
+    public void add(int actSpriteId, int pasSpriteId, double scoreChange){
         EventRecord er = events.get(getCantorPairingId(pasSpriteId, pasSpriteId));
         if(er != null){
             er.addOccurrence(scoreChange);
@@ -20,15 +21,31 @@ public class KnowledgeBase {
             events.put(getCantorPairingId(pasSpriteId, pasSpriteId), er);
         }
     }
+    
+    public void clear(){
+        events.clear();
+    }
+    
+    public void printKnowledgeBase(){
+        for(Integer i: events.keySet()){
+            System.out.println("Event ID: "+i);
+            EventRecord er = events.get(i);
+            System.out.println("Occurrences: "+er.occurrences);
+            System.out.println("Active Sprite: "+er.activeSpriteId+", Passive Sprite: "+er.passiveSpriteId);
+            System.out.println("Score Change: "+er.totalScoreChange);
+            //System.out.println("Passive Sprite: "+er.passiveSpriteId);
+        }
+        System.out.println("");
+    }
        
     public class EventRecord{
         int occurrences;
-        int scoreChange;
-        int totalScoreChange;
+        double scoreChange;
+        double totalScoreChange;
         int activeSpriteId;
         int passiveSpriteId;
 
-        public EventRecord(int activeSpriteId, int passiveSpriteId, int scoreChange) {
+        public EventRecord(int activeSpriteId, int passiveSpriteId, double scoreChange) {
             this.occurrences = 1;
             this.activeSpriteId = activeSpriteId;
             this.passiveSpriteId = passiveSpriteId;
@@ -36,10 +53,11 @@ public class KnowledgeBase {
             this.totalScoreChange = scoreChange;
         }
         
-        public void addOccurrence(int scoreChange){
+        public void addOccurrence(double scoreChange){
             this.occurrences += 1;
             this.totalScoreChange += scoreChange;
             this.scoreChange = this.totalScoreChange/this.occurrences;
+            
         }
         
     }
