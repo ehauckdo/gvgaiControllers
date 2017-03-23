@@ -1,6 +1,7 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
 import core.game.GameDescription;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -11,14 +12,14 @@ public class KnowledgeBase {
 
     HashMap<Integer, EventRecord> events = new HashMap();
      
-    public void add(int actSpriteId, int pasSpriteId, double scoreChange){
-        EventRecord er = events.get(getCantorPairingId(pasSpriteId, pasSpriteId));
+    public void add(int actTypeId, int pasTypeId, double scoreChange){
+        EventRecord er = events.get(getCantorPairingId(pasTypeId, pasTypeId));
         if(er != null){
             er.addOccurrence(scoreChange);
         }
         else{
-            er = new EventRecord(actSpriteId, pasSpriteId, scoreChange);
-            events.put(getCantorPairingId(pasSpriteId, pasSpriteId), er);
+            er = new EventRecord(actTypeId, pasTypeId, scoreChange);
+            events.put(getCantorPairingId(pasTypeId, pasTypeId), er);
         }
     }
     
@@ -30,33 +31,34 @@ public class KnowledgeBase {
         for(Integer i: events.keySet()){
             System.out.println("Event ID: "+i);
             EventRecord er = events.get(i);
-            System.out.println("Occurrences: "+er.occurrences);
-            System.out.println("Active Sprite: "+er.activeSpriteId+", Passive Sprite: "+er.passiveSpriteId);
-            System.out.println("Score Change: "+er.totalScoreChange);
-            //System.out.println("Passive Sprite: "+er.passiveSpriteId);
+            System.out.println("Occurrences: "+er.scoreChanges.size());
+            System.out.println("Active Type: "+er.activeTypeId+", Passive Type: "+er.passiveTypeId);
+            System.out.println("Score Change: "+er.averageScoreChange);
         }
         System.out.println("");
     }
        
     public class EventRecord{
         int occurrences;
-        double scoreChange;
-        double totalScoreChange;
-        int activeSpriteId;
-        int passiveSpriteId;
+        double averageScoreChange;
+        int activeTypeId;
+        int passiveTypeId;
+        ArrayList<Double> scoreChanges = new ArrayList<>();
 
-        public EventRecord(int activeSpriteId, int passiveSpriteId, double scoreChange) {
-            this.occurrences = 1;
-            this.activeSpriteId = activeSpriteId;
-            this.passiveSpriteId = passiveSpriteId;
-            this.scoreChange = scoreChange;
-            this.totalScoreChange = scoreChange;
+        public EventRecord(int activeTypeId, int passiveTypeId, double scoreChange) {
+            this.activeTypeId = activeTypeId;
+            this.passiveTypeId = passiveTypeId;
+            this.scoreChanges.add(scoreChange);
+            this.averageScoreChange = scoreChange;
         }
         
         public void addOccurrence(double scoreChange){
-            this.occurrences += 1;
-            this.totalScoreChange += scoreChange;
-            this.scoreChange = this.totalScoreChange/this.occurrences;
+            this.scoreChanges.add(scoreChange);
+            this.averageScoreChange = 0;
+            for(Double d : this.scoreChanges){
+                this.averageScoreChange += d;
+            }
+            this.averageScoreChange /= this.scoreChanges.size();
             
         }
         

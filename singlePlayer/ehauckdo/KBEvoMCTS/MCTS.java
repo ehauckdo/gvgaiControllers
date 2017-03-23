@@ -117,7 +117,7 @@ public class MCTS extends CustomController {
         }
         lastKnownEvent = event_index;
         
-        //knowledgeBase.printKnowledgeBase();
+        knowledgeBase.printKnowledgeBase();
         //System.out.println(event_index+", "+lastKnownEvent);
         //if(knowledgeBase.events.size() > 10){
         //    System.out.println(stateObs.getAvatarType());
