@@ -13,7 +13,7 @@ public class KnowledgeBase {
     HashMap<Integer, EventRecord> events = new HashMap();
      
     public void add(int actTypeId, int pasTypeId, double scoreChange){
-        EventRecord er = events.get(getCantorPairingId(pasTypeId, pasTypeId));
+        EventRecord er = events.get(getCantorPairingId(actTypeId, pasTypeId));
         if(er != null){
             er.addOccurrence(scoreChange);
         }
