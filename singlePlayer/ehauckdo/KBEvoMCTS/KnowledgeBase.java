@@ -1,6 +1,5 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
-import core.game.GameDescription;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -19,12 +18,38 @@ public class KnowledgeBase {
         }
         else{
             er = new EventRecord(actTypeId, pasTypeId, scoreChange);
-            events.put(getCantorPairingId(pasTypeId, pasTypeId), er);
+            events.put(getCantorPairingId(actTypeId, pasTypeId), er);
         }
     }
     
     public void clear(){
         events.clear();
+    }
+    
+    public int getOcurrences(int actTypeId, int pasTypeId){
+        int key = getCantorPairingId(actTypeId, pasTypeId);
+        EventRecord event = events.get(key);
+        if(event == null)
+            return 0;
+        else return event.scoreChanges.size();
+    }
+    
+    public int getOcurrences(int key){
+        EventRecord event = events.get(key);
+        if(event == null)
+            return 0;
+        else return event.scoreChanges.size();
+    }
+    
+    public boolean equals(KnowledgeBase kb){
+        events.keySet();
+        if(events.keySet() != kb.events.keySet()){
+            return false;
+        }
+        for(Integer i : events.keySet()){
+           
+        }
+        return false;
     }
     
     public void printKnowledgeBase(){
@@ -33,13 +58,16 @@ public class KnowledgeBase {
             EventRecord er = events.get(i);
             System.out.println("Occurrences: "+er.scoreChanges.size());
             System.out.println("Active Type: "+er.activeTypeId+", Passive Type: "+er.passiveTypeId);
-            System.out.println("Score Change: "+er.averageScoreChange);
+            System.out.println("Average Score Change: "+er.averageScoreChange);
+            System.out.println("Scores: ");
+            for(Double score : er.scoreChanges){
+                System.out.print(score+", ");
+            }
         }
         System.out.println("");
     }
        
     public class EventRecord{
-        int occurrences;
         double averageScoreChange;
         int activeTypeId;
         int passiveTypeId;
@@ -54,11 +82,11 @@ public class KnowledgeBase {
         
         public void addOccurrence(double scoreChange){
             this.scoreChanges.add(scoreChange);
-            this.averageScoreChange = 0;
+            this.averageScoreChange = scoreChange;
             for(Double d : this.scoreChanges){
                 this.averageScoreChange += d;
-            }
-            this.averageScoreChange /= this.scoreChanges.size();
+            }   
+            this.averageScoreChange /= (double) this.scoreChanges.size();
             
         }
         
