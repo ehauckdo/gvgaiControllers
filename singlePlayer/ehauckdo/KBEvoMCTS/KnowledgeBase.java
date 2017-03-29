@@ -1,6 +1,5 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -10,6 +9,19 @@ import java.util.HashMap;
 public class KnowledgeBase {
 
     HashMap<Integer, EventRecord> events = new HashMap();
+
+    public KnowledgeBase() {
+    }
+    
+    public KnowledgeBase(KnowledgeBase kb) {
+        if(kb != null){
+            for(Integer id: events.keySet()){
+                EventRecord er = kb.events.get(id);
+                EventRecord new_er = new EventRecord(er.activeTypeId, er.passiveTypeId, er.scoreChanges);
+                this.events.put(id, new_er);
+            }
+        }
+    }
      
     public void add(int actTypeId, int pasTypeId, double scoreChange){
         EventRecord er = events.get(getCantorPairingId(actTypeId, pasTypeId));
@@ -41,6 +53,13 @@ public class KnowledgeBase {
         else return event.scoreChanges.size();
     }
     
+    public double getAvgScoreChange(int key){
+        EventRecord event = events.get(key);
+        if(event == null)
+            return 0;
+        else return event.averageScoreChange;
+    }
+    
     public boolean equals(KnowledgeBase kb){
         events.keySet();
         if(events.keySet() != kb.events.keySet()){
@@ -65,32 +84,7 @@ public class KnowledgeBase {
             }
         }
         System.out.println("");
-    }
-       
-    public class EventRecord{
-        double averageScoreChange;
-        int activeTypeId;
-        int passiveTypeId;
-        ArrayList<Double> scoreChanges = new ArrayList<>();
-
-        public EventRecord(int activeTypeId, int passiveTypeId, double scoreChange) {
-            this.activeTypeId = activeTypeId;
-            this.passiveTypeId = passiveTypeId;
-            this.scoreChanges.add(scoreChange);
-            this.averageScoreChange = scoreChange;
-        }
-        
-        public void addOccurrence(double scoreChange){
-            this.scoreChanges.add(scoreChange);
-            this.averageScoreChange = scoreChange;
-            for(Double d : this.scoreChanges){
-                this.averageScoreChange += d;
-            }   
-            this.averageScoreChange /= (double) this.scoreChanges.size();
-            
-        }
-        
-    }
+    }   
     
     private int getCantorPairingId(int a, int b){
         return (a + b) * (a + b + 1) / 2 + a;

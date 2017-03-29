@@ -37,9 +37,6 @@ public class SingleTreeNode {
     public double K = Math.sqrt(2);
     public int iterations = 0;
 
-    public KnowledgeBase knowledgeBase;
-    private EventHistory eventHistory;
-
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
     }
@@ -57,9 +54,6 @@ public class SingleTreeNode {
         } else {
             m_depth = 0;
         }
-
-        // TODO: copy from parent + update new events, instead of initializing
-        this.eventHistory = new EventHistory(state);
 
     }
 
@@ -94,13 +88,13 @@ public class SingleTreeNode {
         System.out.println("Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
         /*System.out.println("Selected MAtrix:");
         MCTS.weightMatrix.printMatrix();*/
- /*for(weightMatrix matrix : MCTS.mutated_matrixList){
+        /*for(weightMatrix matrix : MCTS.mutated_matrixList){
             matrix.printMatrix();
             System.out.println("");
         }
         System.exit(0);*/
 
- /*
+        /*
         System.out.println("Average time:" + avgTimeTaken);
         System.out.println("Cumulative time:"+acumTimeTaken);
         System.out.println("Highest delta: "+delta);
@@ -232,36 +226,43 @@ public class SingleTreeNode {
             thisDepth++;
         }
 
-        double delta = value(rollerState);
+        double delta_r = value(rollerState) - this.state.getGameScore();
 
         double delta_z = getKnowledgeChange(rollerState);
-        System.out.println("KnowledgeChange: " + delta_z);
+        //System.out.println("KnowledgeChange: " + delta_z);
 
         double delta_d = dsChange(rollerState);
+        //System.out.println("DistanceChange: "+ delta_d);
 
         // if delta is not very low (game over && player lost), save mutated matrix
-        if (delta > 0) {
-            mutated_weightmatrix.fitness = delta;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
+        if (delta_r > 0) {
+            mutated_weightmatrix.fitness = delta_r;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
             MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
         }
         //System.out.println("Size:"+MCTS.matrix_collection.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix
-        if (delta > MCTS.current_bestFitness) {
+        if (delta_r > MCTS.current_bestFitness) {
             MCTS.num_evolutions += 1;
-            MCTS.current_bestFitness = delta;
+            MCTS.current_bestFitness = delta_r;
             MCTS.weightMatrix = mutated_weightmatrix;
         }
 
-        if (delta < bounds[0]) {
-            bounds[0] = delta;
+        if (delta_r < bounds[0]) {
+            bounds[0] = delta_r;
         }
 
-        if (delta > bounds[1]) {
-            bounds[1] = delta;
+        if (delta_r > bounds[1]) {
+            bounds[1] = delta_r;
         }
 
-        return delta;
+        if (delta_r > 0) {
+            System.out.println("Using score ΔR: " + delta_r);
+            return delta_r;
+        } else {
+            System.out.println("Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_r));
+            return 0.66 * delta_z + 0.33 * delta_r;
+        }
     }
 
     public double value(StateObservation a_gameState) {
@@ -280,8 +281,6 @@ public class SingleTreeNode {
 
         return rawScore;
     }
-
-    
 
     public boolean finishRollout(StateObservation rollerState, int depth) {
         if (depth >= ROLLOUT_DEPTH) //rollout end condition.
@@ -376,78 +375,45 @@ public class SingleTreeNode {
 
     public void queryState(StateObservation stateObs) {
         MCTS.current_features.clear();
-        Vector2d position = stateObs.getAvatarPosition();
+        HashMap<Integer, Double> features = getFeatures(stateObs);
+        MCTS.current_features = features;
+    }
+
+    public HashMap<Integer, Double> getFeatures(StateObservation stateObs) {
+        HashMap<Integer, Double> features = new HashMap();
+        Vector2d playerPosition = stateObs.getAvatarPosition();
         ArrayList<Observation>[] observationLists;
 
         // If there is NPCs on this game
-        observationLists = stateObs.getNPCPositions(position);
-        if (observationLists != null) {
-            for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
-                    Observation obs = list.get(0);
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
-                    // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
-                }
-                break;
-            }
-        }
+        observationLists = stateObs.getNPCPositions(playerPosition);
+        probeObservationList(observationLists, features);
 
-        // If there is Immovable on this game
-        /*observationLists = stateObs.getImmovablePositions(position);
-        if (observationLists != null) {
-        //System.out.println("===== "+ observationLists.length +" Immovable Types =====");
-            for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
-                    Observation obs = list.get(0);
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
-                    // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
-                }
-                break;
-            }
-        }*/
-        
         // If there is Movable on this game
-        observationLists = stateObs.getMovablePositions(position);
-        if (observationLists != null) {
-            //System.out.println("===== "+ observationLists.length +" Movable Types =====");
-            for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
-                    Observation obs = list.get(0);
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
-                    // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
-                }
-                break;
-            }
-        }
+        observationLists = stateObs.getMovablePositions(playerPosition);
+        probeObservationList(observationLists, features);
 
         // If there is Resources on this game
-        observationLists = stateObs.getResourcesPositions(position);
-        if (observationLists != null) {
-            //System.out.println("===== "+ observationLists.length +" Resource Types =====");
-            for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
-                    Observation obs = list.get(0);
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
-                    // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
-                }
-                break;
-            }
-        }
+        observationLists = stateObs.getResourcesPositions(playerPosition);
+        probeObservationList(observationLists, features);
 
         // If there is Portals on this game
-        observationLists = stateObs.getPortalsPositions(position);
+        observationLists = stateObs.getPortalsPositions(playerPosition);
+        probeObservationList(observationLists, features);
+
+        return features;
+    }
+    
+    private void probeObservationList(ArrayList<Observation>[] observationLists, HashMap<Integer, Double> features){
         if (observationLists != null) {
-            //System.out.println("===== "+ observationLists.length +" Portal Types =====");
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty()) {
                     Observation obs = list.get(0);
-                    MCTS.current_features.put(obs.itype, obs.sqDist);
+                    features.put(obs.itype, obs.sqDist);
                     // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
                 }
                 break;
             }
         }
-
     }
 
     public int calculateAction(weightMatrix weightMatrix) {
@@ -474,48 +440,49 @@ public class SingleTreeNode {
     }
 
     private double getKnowledgeChange(StateObservation newState) {
-        System.out.println("checking..." + this.state.getEventsHistory().size() + "," + newState.getEventsHistory().size());
+        //System.out.println("checking..." + this.state.getEventsHistory().size() + "," + newState.getEventsHistory().size());
 
         // there is no new events after simulation
         if (this.state.getEventsHistory().size() == newState.getEventsHistory().size()) {
             return 0;
         }
-        System.out.println("new events!");
-        eventHistory.printEventsInfo();
+        //System.out.println("new events!");
+        //eventHistory.printEventsInfo();
 
         // map new events into a hashmap
-        HashMap<Integer, Integer>  eventsHashMap = mapNewEvents(this.state, newState);
-        
+        HashMap<Integer, Integer> eventsHashMap = mapNewEvents(this.state, newState);
+
         return calculateKnowledgeChange(eventsHashMap);
 
     }
-    
+
     private HashMap<Integer, Integer> mapNewEvents(StateObservation oldState, StateObservation newState) {
-        
+
         HashMap<Integer, Integer> eventsHashMap = new HashMap();
-        double scoreChange = this.state.getGameScore()-newState.getGameScore();
-        
+        double scoreChange = this.state.getGameScore() - newState.getGameScore();
+
         int new_events = newState.getEventsHistory().size() - oldState.getEventsHistory().size();
-        
+
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
             Event e = events.next();
-            
+
             // TODO: verify if current event has activeType as player or projectile
             if (MCTS.current_features.containsKey(e.passiveTypeId)) {
                 Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
-                System.out.println("event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+                //System.out.println("event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 if (occurrences == null) {
                     eventsHashMap.put(event_id, 1);
                 } else {
                     eventsHashMap.put(event_id, occurrences + 1);
                 }
-                int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
-                System.out.println("Zi0: " + Zi0);
-                
+
+                //int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
+                //System.out.println("Zi0: " + Zi0);
                 // Add events to KB
                 MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
+                //this.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
             }
         }
         return eventsHashMap;
@@ -523,32 +490,68 @@ public class SingleTreeNode {
 
     private double calculateKnowledgeChange(HashMap<Integer, Integer> eventsHashMap) {
         double knowledgeChange = 0;
-        
+
         //Compare with previous events
-        System.out.println("Calculating Score Change");
+        //System.out.println("Calculating Score Change");
         for (Integer id : eventsHashMap.keySet()) {
-            int Zi0 = this.eventHistory.getOcurrences(id);
-            int Zif = eventsHashMap.get(id);
+            int Zi0 = MCTS.knowledgeBase.getOcurrences(id);
+            int Zif = Zi0 + eventsHashMap.get(id);
             if (Zi0 == 0) {
-                System.out.println("knowledgeChange += Zif = " + Zif);
+                //System.out.println("knowledgeChange += Zif = " + Zif);
                 // Ki = Zif
                 knowledgeChange += Zif;
             } else {
-                System.out.println("knowledgeChange += (Zif / (double) Zi0) - 1 = " + (((Zif + Zi0) / (double) Zi0) - 1));
+                //System.out.println("knowledgeChange += (Zif / (double) Zi0) - 1 = " + (((Zif + Zi0) / (double) Zi0) - 1));
                 // Ki = Kif/Ki0 - 1
                 knowledgeChange += ((Zif + Zi0) / (double) Zi0) - 1;
             }
-            
+
         }
         return knowledgeChange;
     }
-    
+
     private double dsChange(StateObservation stateObs) {
         double delta_d = 0;
-        return 0;
-    }
+        HashMap<Integer, Double> Di_0 = getFeatures(this.state);
+        HashMap<Integer, Double> Di_f = getFeatures(stateObs);
 
-    private class EventHistory {
+        /*System.out.println("MCTS.current_features:");
+        for(Integer feature_id: MCTS.current_features.keySet()){
+            System.out.println(feature_id+": "+MCTS.current_features.get(feature_id));
+        }
+        System.out.println("Di_0 features:");
+        for(Integer feature_id: Di_0.keySet()){
+            System.out.println(feature_id+": "+Di_0.get(feature_id));
+        }*/
+        for (Integer feature_id : Di_0.keySet()) {
+            //System.out.println("feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
+
+            // this sprite no longer exists after rollout, ignore it
+            if (Di_f.get(feature_id) == null) {
+                continue;
+            }
+
+            int occurrences = MCTS.knowledgeBase.getOcurrences(feature_id);
+            double avg_scoreChange = MCTS.knowledgeBase.getAvgScoreChange(feature_id);
+
+            if (occurrences == 0
+                    || (Di_0.get(feature_id) > 0 && avg_scoreChange > 0)) {
+
+                delta_d += 1 - (Di_f.get(feature_id) / (double) Di_0.get(feature_id));
+                //System.out.println("feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
+
+                //System.out.println("Not zero! :"+delta_d);
+            } else {
+                delta_d += 0;
+            }
+
+        }
+
+        return delta_d;
+    }
+    
+
+    /*private class EventHistory {
 
         public HashMap<Integer, Integer> eventsHistory = new HashMap();
 
@@ -562,8 +565,9 @@ public class SingleTreeNode {
             while (events_iterator.hasNext()) {
                 Event e = events_iterator.next();
                 // TODO: verify if current event has activeType as player or projectile
-                if (MCTS.current_features.containsKey(e.passiveTypeId))
+                if (MCTS.current_features.containsKey(e.passiveTypeId)) {
                     this.addOcurrence(e.activeTypeId, e.passiveTypeId);
+                }
             }
         }
 
@@ -582,7 +586,7 @@ public class SingleTreeNode {
             Integer occurrences = eventsHistory.get(event_id);
             return occurrences == null ? 0 : occurrences;
         }
-        
+
         public final int getOcurrences(int event_id) {
             Integer occurrences = eventsHistory.get(event_id);
             return occurrences == null ? 0 : occurrences;
@@ -603,6 +607,6 @@ public class SingleTreeNode {
             }
         }
 
-    }
+    }*/
 
 }

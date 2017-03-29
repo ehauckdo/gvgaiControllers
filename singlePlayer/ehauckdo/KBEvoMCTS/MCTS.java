@@ -29,9 +29,6 @@ public class MCTS extends CustomController {
     public static RandomCollection<weightMatrix> matrix_collection = new RandomCollection<>();
 
     public static KnowledgeBase knowledgeBase = new KnowledgeBase();
-    public static double lastScore = 0;
-    public static ArrayList<Integer> knownSprites = new ArrayList<>();
-    public static int lastKnownEvent = -1;
 
     Types.ACTIONS[] actions;
 
@@ -53,12 +50,9 @@ public class MCTS extends CustomController {
 
         // Sample from all the mutated matrices and choose 1 to keep stored
         if (!matrix_collection.isEmpty()) {
-
             simpleSample();
             //differentialEvolution();
         }
-
-        lastScore = stateObs.getGameScore();
 
         //Determine the best action to take and return it.
         int action = m_root.mostVisitedAction();
