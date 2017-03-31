@@ -206,8 +206,14 @@ public class SingleTreeNode {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
 
+        //System.out.println("OLD matrix:");
+        //MCTS.weightMatrix.printMatrix();
+        
         // get a new mutated weight matrix 
         weightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
+        
+        //System.out.println("NEW mutated matrix:");
+        //mutated_weightmatrix.printMatrix();
 
         while (!finishRollout(rollerState, thisDepth)) {
 
@@ -220,33 +226,33 @@ public class SingleTreeNode {
 
             // use mutated matrix to calculate next action for the rollout
             int action = calculateAction(mutated_weightmatrix);
+            
+            //int action = m_rnd.nextInt(num_actions);
+            
+            //printAction(actions[action]);
 
             //int action = m_rnd.nextInt(num_actions);
             rollerState.advance(actions[action]);
             thisDepth++;
         }
 
-        double delta_r = value(rollerState) - this.state.getGameScore();
+        double newScore = value(rollerState);
+        double delta_r = newScore - this.state.getGameScore();
 
         double delta_z = getKnowledgeChange(rollerState);
-        //System.out.println("KnowledgeChange: " + delta_z);
-
         double delta_d = dsChange(rollerState);
-        //System.out.println("DistanceChange: "+ delta_d);
-
-        // if delta is not very low (game over && player lost), save mutated matrix
-        if (delta_r > 0) {
-            mutated_weightmatrix.fitness = delta_r;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble());   
-            MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);
-        }
-        //System.out.println("Size:"+MCTS.matrix_collection.size());
 
         // if the resulting delta gives best fitness, save the mutated matrix
-        if (delta_r > MCTS.current_bestFitness) {
+        // KB FastEVo approach
+        if (newScore >= MCTS.current_bestFitness) {
             MCTS.num_evolutions += 1;
-            MCTS.current_bestFitness = delta_r;
+            MCTS.current_bestFitness = newScore;
             MCTS.weightMatrix = mutated_weightmatrix;
         }
+        
+        // New approach
+        /*mutated_weightmatrix.fitness = newScore;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble()); 
+        MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);*/
 
         if (delta_r < bounds[0]) {
             bounds[0] = delta_r;
@@ -256,12 +262,12 @@ public class SingleTreeNode {
             bounds[1] = delta_r;
         }
 
-        if (delta_r > 0) {
-            System.out.println("Using score ΔR: " + delta_r);
+        if (delta_r != 0) {
+            //System.out.println("Using score ΔR: " + delta_r);
             return delta_r;
         } else {
-            System.out.println("Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_r));
-            return 0.66 * delta_z + 0.33 * delta_r;
+            //System.out.println("Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_d));
+            return (0.66 * delta_z + 0.33 * delta_d);
         }
     }
 
@@ -420,6 +426,7 @@ public class SingleTreeNode {
 
         double[] strenght = new double[num_actions];
         double sum = 0;
+        int stronghest = 0;
 
         for (int action_id = 0; action_id < num_actions; action_id++) {
             strenght[action_id] = 0;
@@ -427,25 +434,34 @@ public class SingleTreeNode {
             for (Integer feature_id : MCTS.current_features.keySet()) {
                 strenght[action_id] += currentMap.get(feature_id) * MCTS.current_features.get(feature_id);
             }
+            if(strenght[action_id] >= strenght[stronghest]){
+                stronghest = action_id;
+            }
+        }
+        
+        System.out.println("\nCalculating Actions... ");
+        for (int action_id = 0; action_id < num_actions; action_id++) {
+            System.out.println("Strenght action "+action_id+": "+strenght[action_id]);
         }
 
         RandomCollection<Integer> rnd = new RandomCollection<>();
 
         for (int i = 0; i < num_actions; i++) {
-            rnd.add(strenght[i] / sum, i);
+            rnd.add(strenght[i], i);
         }
 
+        //return stronghest;
         return rnd.next();
 
     }
 
     private double getKnowledgeChange(StateObservation newState) {
-        //System.out.println("checking..." + this.state.getEventsHistory().size() + "," + newState.getEventsHistory().size());
-
+        
         // there is no new events after simulation
         if (this.state.getEventsHistory().size() == newState.getEventsHistory().size()) {
             return 0;
         }
+        
         //System.out.println("new events!");
         //eventHistory.printEventsInfo();
 
@@ -462,6 +478,9 @@ public class SingleTreeNode {
         double scoreChange = this.state.getGameScore() - newState.getGameScore();
 
         int new_events = newState.getEventsHistory().size() - oldState.getEventsHistory().size();
+        
+        //System.out.println("\nKB checking... "+new_events+" new events! ");
+
 
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
@@ -477,12 +496,12 @@ public class SingleTreeNode {
                 } else {
                     eventsHashMap.put(event_id, occurrences + 1);
                 }
-
-                //int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
-                //System.out.println("Zi0: " + Zi0);
+           
                 // Add events to KB
                 MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
-                //this.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
+                //int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
+                int Zi0 = MCTS.knowledgeBase.getOcurrences(e.activeTypeId, e.passiveTypeId);
+                //System.out.println("Zi0: " + Zi0);
             }
         }
         return eventsHashMap;
@@ -492,7 +511,7 @@ public class SingleTreeNode {
         double knowledgeChange = 0;
 
         //Compare with previous events
-        //System.out.println("Calculating Score Change");
+        //System.out.println("Calculating KnoweldgeChange");
         for (Integer id : eventsHashMap.keySet()) {
             int Zi0 = MCTS.knowledgeBase.getOcurrences(id);
             int Zif = Zi0 + eventsHashMap.get(id);
@@ -507,6 +526,7 @@ public class SingleTreeNode {
             }
 
         }
+        //System.out.println("KnowledgeChange: "+knowledgeChange);
         return knowledgeChange;
     }
 
@@ -523,10 +543,13 @@ public class SingleTreeNode {
         for(Integer feature_id: Di_0.keySet()){
             System.out.println(feature_id+": "+Di_0.get(feature_id));
         }*/
+        //System.out.println("\nCalculating DistanceChange");
         for (Integer feature_id : Di_0.keySet()) {
             //System.out.println("feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
 
             // this sprite no longer exists after rollout, ignore it
+            // this could mean that the avatar hit the sprite, if that's the
+            // case, we can just rely on the score change to move the avatar
             if (Di_f.get(feature_id) == null) {
                 continue;
             }
@@ -547,66 +570,34 @@ public class SingleTreeNode {
 
         }
 
+        //System.out.println("DistanceChange: "+delta_d);
         return delta_d;
     }
     
 
-    /*private class EventHistory {
-
-        public HashMap<Integer, Integer> eventsHistory = new HashMap();
-
-        public EventHistory() {
+    public void printAction(Types.ACTIONS action){
+        String character = "";
+        if(null != action)
+            switch (action) {
+            case ACTION_UP:
+                character = "↑";
+                break;
+            case ACTION_DOWN:
+                character = "↓";
+                break;
+            case ACTION_LEFT:
+                character = "←";
+                break;
+            case ACTION_RIGHT:
+                character = "→";
+                break;
+            case ACTION_USE:
+                character = "USE";
+                break;
+            default:
+                break;
         }
-
-        public EventHistory(StateObservation stateObs) {
-            TreeSet<Event> stateObs_events = stateObs.getEventsHistory();
-            Iterator<Event> events_iterator = stateObs_events.iterator();
-
-            while (events_iterator.hasNext()) {
-                Event e = events_iterator.next();
-                // TODO: verify if current event has activeType as player or projectile
-                if (MCTS.current_features.containsKey(e.passiveTypeId)) {
-                    this.addOcurrence(e.activeTypeId, e.passiveTypeId);
-                }
-            }
-        }
-
-        public final void addOcurrence(int activeTypeId, int passiveTypeId) {
-            int event_id = Util.getCantorPairingId(activeTypeId, passiveTypeId);
-            Integer occurrences = eventsHistory.get(event_id);
-            if (occurrences == null) {
-                eventsHistory.put(event_id, 1);
-            } else {
-                eventsHistory.put(event_id, occurrences + 1);
-            }
-        }
-
-        public final int getOcurrences(int activeTypeId, int passiveTypeId) {
-            int event_id = Util.getCantorPairingId(activeTypeId, passiveTypeId);
-            Integer occurrences = eventsHistory.get(event_id);
-            return occurrences == null ? 0 : occurrences;
-        }
-
-        public final int getOcurrences(int event_id) {
-            Integer occurrences = eventsHistory.get(event_id);
-            return occurrences == null ? 0 : occurrences;
-        }
-
-        public final int getTotalNumberEvents() {
-            int number_events = 0;
-            for (Integer occurrences : eventsHistory.values()) {
-                number_events += occurrences;
-            }
-            return number_events;
-        }
-
-        public void printEventsInfo() {
-            for (Integer i : eventsHistory.keySet()) {
-                System.out.println("Event ID: " + i);
-                System.out.println("Occurrences: " + eventsHistory.get(i));
-            }
-        }
-
-    }*/
+        System.out.println(character);
+    }
 
 }
