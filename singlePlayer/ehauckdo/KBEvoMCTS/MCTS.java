@@ -31,6 +31,7 @@ public class MCTS extends CustomController {
     public static KnowledgeBase knowledgeBase = new KnowledgeBase();
 
     Types.ACTIONS[] actions;
+    public static HashMap<Integer, Integer> player_projectiles = new HashMap();
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions) {
         this.num_actions = num_actions;
@@ -41,7 +42,7 @@ public class MCTS extends CustomController {
 
     @Override
     public Types.ACTIONS act(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) {
-
+          
         //Set the game observation to a newly root node.
         m_root = new SingleTreeNode(stateObs, m_rnd, num_actions, actions);
         

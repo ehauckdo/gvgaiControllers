@@ -405,6 +405,17 @@ public class SingleTreeNode {
         // If there is Portals on this game
         observationLists = stateObs.getPortalsPositions(playerPosition);
         probeObservationList(observationLists, features);
+        
+        // Update typeIds of player projectiles, this could probably be handled 
+        // in a more fashonable way
+        observationLists = stateObs.getFromAvatarSpritesPositions();
+        if (observationLists != null) {
+            for (ArrayList<Observation> list : observationLists) {
+                for(Observation obs : list){
+                    MCTS.player_projectiles.put(obs.itype, 0);
+                }
+            }
+        }
 
         return features;
     }
@@ -492,6 +503,8 @@ public class SingleTreeNode {
     }
 
     private HashMap<Integer, Integer> mapNewEvents(StateObservation oldState, StateObservation newState) {
+        
+        newState.getFromAvatarSpritesPositions();
 
         HashMap<Integer, Integer> eventsHashMap = new HashMap();
         double scoreChange = this.state.getGameScore() - newState.getGameScore();
@@ -500,26 +513,31 @@ public class SingleTreeNode {
         
         //System.out.println("\nKB checking... "+new_events+" new events! ");
 
-
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
             Event e = events.next();
 
-            // TODO: verify if current event has activeType as player or projectile
+            // make sure this collision is with player or projectile by player
+            if(e.activeTypeId != newState.getAvatarType() && 
+                    e.passiveTypeId != newState.getAvatarType() &&
+                    !MCTS.player_projectiles.containsKey(e.activeTypeId) && 
+                    !MCTS.player_projectiles.containsKey(e.passiveTypeId))
+                continue;
+            
             if (MCTS.current_features.containsKey(e.passiveTypeId)) {
                 Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
-                //System.out.println("event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+                System.out.println("event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 if (occurrences == null) {
                     eventsHashMap.put(event_id, 1);
                 } else {
                     eventsHashMap.put(event_id, occurrences + 1);
                 }
-           
+
                 // Add events to KB
                 MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
                 //int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
-                int Zi0 = MCTS.knowledgeBase.getOcurrences(e.activeTypeId, e.passiveTypeId);
+                //int Zi0 = MCTS.knowledgeBase.getOcurrences(e.activeTypeId, e.passiveTypeId);
                 //System.out.println("Zi0: " + Zi0);
             }
         }
