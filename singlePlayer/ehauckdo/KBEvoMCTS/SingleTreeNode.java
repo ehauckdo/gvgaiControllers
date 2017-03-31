@@ -244,7 +244,7 @@ public class SingleTreeNode {
 
         // if the resulting delta gives best fitness, save the mutated matrix
         // KB FastEVo approach
-        if (newScore >= MCTS.current_bestFitness) {
+        if (newScore > MCTS.current_bestFitness) {
             MCTS.num_evolutions += 1;
             MCTS.current_bestFitness = newScore;
             MCTS.weightMatrix = mutated_weightmatrix;
@@ -415,7 +415,7 @@ public class SingleTreeNode {
                 if (!list.isEmpty()) {
                     Observation obs = list.get(0);
                     features.put(obs.itype, obs.sqDist);
-                    // System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size());
+                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
                 }
                 break;
             }
@@ -426,7 +426,8 @@ public class SingleTreeNode {
 
         double[] strenght = new double[num_actions];
         double sum = 0;
-        int stronghest = 0;
+        int stronghest_id = 0;
+        int weakest_id = 0;
 
         for (int action_id = 0; action_id < num_actions; action_id++) {
             strenght[action_id] = 0;
@@ -434,15 +435,33 @@ public class SingleTreeNode {
             for (Integer feature_id : MCTS.current_features.keySet()) {
                 strenght[action_id] += currentMap.get(feature_id) * MCTS.current_features.get(feature_id);
             }
-            if(strenght[action_id] >= strenght[stronghest]){
-                stronghest = action_id;
+            if(strenght[action_id] >= strenght[stronghest_id]){
+                stronghest_id = action_id;
+            }
+            if(strenght[action_id] <= strenght[weakest_id]){
+                weakest_id = action_id;
             }
         }
         
-        System.out.println("\nCalculating Actions... ");
+        /*System.out.println("\nCalculating Actions... ");
         for (int action_id = 0; action_id < num_actions; action_id++) {
             System.out.println("Strenght action "+action_id+": "+strenght[action_id]);
+        }*/
+        
+        double stronghest = strenght[stronghest_id];
+        double weakest = strenght[weakest_id];
+        
+        //if(weakest < 0){
+        for (int action_id = 0; action_id < num_actions; action_id++) {
+            //strenght[action_id] += Math.abs(weakest);
+            strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
         }
+        //}
+        
+        /*System.out.println("\nNormalized Actions... ");
+        for (int action_id = 0; action_id < num_actions; action_id++) {
+            System.out.println("Strenght action "+action_id+": "+strenght[action_id]);
+        }*/
 
         RandomCollection<Integer> rnd = new RandomCollection<>();
 
