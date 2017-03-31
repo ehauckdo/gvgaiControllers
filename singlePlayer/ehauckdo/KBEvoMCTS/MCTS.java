@@ -8,13 +8,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
 import ontology.Types;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import tools.ElapsedCpuTimer;
+
+
 
 /**
  *
  * @author hauck based on the sample SingleMCTSPlayer
  */
 public class MCTS extends CustomController {
+
+    static final Logger LOGGER = Logger.getLogger(MCTS.class.getName());
 
     public SingleTreeNode m_root;
 
@@ -38,6 +44,7 @@ public class MCTS extends CustomController {
         this.actions = actions;
         m_rnd = a_rnd;
         weightMatrix = new weightMatrix(num_actions);
+        LOGGER.setLevel(Level.INFO);
     }
 
     @Override
@@ -47,9 +54,9 @@ public class MCTS extends CustomController {
         m_root = new SingleTreeNode(stateObs, m_rnd, num_actions, actions);
         
         current_features = m_root.getFeatures(stateObs);
-        /*System.out.println("current_features:");
+        /*MCTS.LOGGER.log(Level.INFO, "current_features:");
         for(Integer i: current_features.keySet()){
-            System.out.println(i+":"+current_features.get(i));
+            MCTS.LOGGER.log(Level.INFO, i+":"+current_features.get(i));
         }*/
         weightMatrix.updateMapping(current_features);
 
@@ -74,11 +81,11 @@ public class MCTS extends CustomController {
     
 
     public static void simpleSample() {
-        //System.out.println("Sampling from collection of "+matrix_collection.map.size()+" matrices"); 
+        //MCTS.LOGGER.log(Level.INFO, "Sampling from collection of "+matrix_collection.map.size()+" matrices"); 
         weightMatrix = matrix_collection.next();
         current_bestFitness = weightMatrix.fitness;
         matrix_collection.clear();
-        /*System.out.println("Chosen:");
+        /*MCTS.LOGGER.log(Level.INFO, "Chosen:");
         weightMatrix.printMatrix();*/
     }
 
@@ -88,10 +95,10 @@ public class MCTS extends CustomController {
         weightMatrix sample2 = matrix_collection.next();*/
 
         /*for(Integer i :sample1.mapped_features.keySet()){
-            System.out.println(i);
+            MCTS.LOGGER.log(Level.INFO, i);
         }
         for(Integer i :sample2.mapped_features.keySet()){
-            System.out.println(i);
+            MCTS.LOGGER.log(Level.INFO, i);
         }*/
     }
         

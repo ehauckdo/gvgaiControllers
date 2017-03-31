@@ -1,6 +1,7 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
 import java.util.HashMap;
+import org.apache.log4j.Level;
 
 /**
  *
@@ -90,7 +91,7 @@ public class weightMatrix {
     public void printMatrix() {
         for (HashMap<Integer, Double> actionKey_hashMap : actionHashMap) {
             for (Integer feature_id : mapped_features.keySet()) {
-                System.out.print(actionKey_hashMap.get(feature_id)+" ");
+                MCTS.LOGGER.log(Level.INFO, actionKey_hashMap.get(feature_id)+" ");
             }
             System.out.print("\n");
         }

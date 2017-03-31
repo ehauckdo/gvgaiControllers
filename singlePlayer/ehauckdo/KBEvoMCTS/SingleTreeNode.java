@@ -9,13 +9,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
 import ontology.Types;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
 import tools.Vector2d;
 import util.Util;
 
 public class SingleTreeNode {
-
+    
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
     public final int ROLLOUT_DEPTH = 20;
@@ -54,7 +56,6 @@ public class SingleTreeNode {
         } else {
             m_depth = 0;
         }
-
     }
 
     public void mctsSearch(ElapsedCpuTimer elapsedTimer) {
@@ -85,14 +86,7 @@ public class SingleTreeNode {
             iterations++;
         }
 
-        System.out.println("Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
-        /*System.out.println("Selected MAtrix:");
-        MCTS.weightMatrix.printMatrix();*/
-        /*for(weightMatrix matrix : MCTS.mutated_matrixList){
-            matrix.printMatrix();
-            System.out.println("");
-        }
-        System.exit(0);*/
+        MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
 
         /*
         System.out.println("Average time:" + avgTimeTaken);
@@ -205,14 +199,14 @@ public class SingleTreeNode {
     public double rollOut() {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
-
-        //System.out.println("OLD matrix:");
+        
+        //MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
         //MCTS.weightMatrix.printMatrix();
         
         // get a new mutated weight matrix 
         weightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
         
-        //System.out.println("NEW mutated matrix:");
+        // MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
         //mutated_weightmatrix.printMatrix();
 
         while (!finishRollout(rollerState, thisDepth)) {
@@ -263,10 +257,10 @@ public class SingleTreeNode {
         }
 
         if (delta_r != 0) {
-            //System.out.println("Using score ΔR: " + delta_r);
+            //MCTS.LOGGER.log(Level.INFO, "Using score ΔR: " + delta_r);
             return delta_r;
         } else {
-            //System.out.println("Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_d));
+            //MCTS.LOGGER.log(Level.INFO, "Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_d));
             return (0.66 * delta_z + 0.33 * delta_d);
         }
     }
@@ -426,7 +420,7 @@ public class SingleTreeNode {
                 if (!list.isEmpty()) {
                     Observation obs = list.get(0);
                     features.put(obs.itype, obs.sqDist);
-                    //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
+                    //MCTS.LOGGER.log(Level.INFO, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
                 }
                 break;
             }
@@ -454,9 +448,9 @@ public class SingleTreeNode {
             }
         }
         
-        /*System.out.println("\nCalculating Actions... ");
+        /*MCTS.LOGGER.log(Level.INFO, "\nCalculating Actions... ");
         for (int action_id = 0; action_id < num_actions; action_id++) {
-            System.out.println("Strenght action "+action_id+": "+strenght[action_id]);
+            MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
         }*/
         
         double stronghest = strenght[stronghest_id];
@@ -468,10 +462,9 @@ public class SingleTreeNode {
             strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
         }
         //}
-        
-        /*System.out.println("\nNormalized Actions... ");
+        /*MCTS.LOGGER.log(Level.INFO, "\nNormalized Actions... ");
         for (int action_id = 0; action_id < num_actions; action_id++) {
-            System.out.println("Strenght action "+action_id+": "+strenght[action_id]);
+            MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
         }*/
 
         RandomCollection<Integer> rnd = new RandomCollection<>();
@@ -491,9 +484,6 @@ public class SingleTreeNode {
         if (this.state.getEventsHistory().size() == newState.getEventsHistory().size()) {
             return 0;
         }
-        
-        //System.out.println("new events!");
-        //eventHistory.printEventsInfo();
 
         // map new events into a hashmap
         HashMap<Integer, Integer> eventsHashMap = mapNewEvents(this.state, newState);
@@ -511,7 +501,7 @@ public class SingleTreeNode {
 
         int new_events = newState.getEventsHistory().size() - oldState.getEventsHistory().size();
         
-        //System.out.println("\nKB checking... "+new_events+" new events! ");
+        //MCTS.LOGGER.log(Level.INFO, "\nKB checking... "+new_events+" new events! ");
 
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
@@ -527,7 +517,7 @@ public class SingleTreeNode {
             if (MCTS.current_features.containsKey(e.passiveTypeId)) {
                 Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
-                System.out.println("event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+                //MCTS.LOGGER.log(Level.INFO, "event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 if (occurrences == null) {
                     eventsHashMap.put(event_id, 1);
                 } else {
@@ -536,9 +526,8 @@ public class SingleTreeNode {
 
                 // Add events to KB
                 MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
-                //int Zi0 = this.eventHistory.getOcurrences(e.activeTypeId, e.passiveTypeId);
                 //int Zi0 = MCTS.knowledgeBase.getOcurrences(e.activeTypeId, e.passiveTypeId);
-                //System.out.println("Zi0: " + Zi0);
+                //MCTS.LOGGER.log(Level.INFO, "Zi0: " + Zi0);
             }
         }
         return eventsHashMap;
@@ -548,22 +537,22 @@ public class SingleTreeNode {
         double knowledgeChange = 0;
 
         //Compare with previous events
-        //System.out.println("Calculating KnoweldgeChange");
+        //MCTS.LOGGER.log(Level.INFO, "Calculating KnoweldgeChange");
         for (Integer id : eventsHashMap.keySet()) {
             int Zi0 = MCTS.knowledgeBase.getOcurrences(id);
             int Zif = Zi0 + eventsHashMap.get(id);
             if (Zi0 == 0) {
-                //System.out.println("knowledgeChange += Zif = " + Zif);
+                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += Zif = " + Zif);
                 // Ki = Zif
                 knowledgeChange += Zif;
             } else {
-                //System.out.println("knowledgeChange += (Zif / (double) Zi0) - 1 = " + (((Zif + Zi0) / (double) Zi0) - 1));
+                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += (Zif / (double) Zi0) - 1 = " + (((Zif + Zi0) / (double) Zi0) - 1));
                 // Ki = Kif/Ki0 - 1
                 knowledgeChange += ((Zif + Zi0) / (double) Zi0) - 1;
             }
 
         }
-        //System.out.println("KnowledgeChange: "+knowledgeChange);
+        //MCTS.LOGGER.log(Level.INFO, "KnowledgeChange: "+knowledgeChange);
         return knowledgeChange;
     }
 
@@ -572,17 +561,18 @@ public class SingleTreeNode {
         HashMap<Integer, Double> Di_0 = getFeatures(this.state);
         HashMap<Integer, Double> Di_f = getFeatures(stateObs);
 
-        /*System.out.println("MCTS.current_features:");
+        /*MCTS.LOGGER.log(Level.INFO, "MCTS.current_features:");
         for(Integer feature_id: MCTS.current_features.keySet()){
-            System.out.println(feature_id+": "+MCTS.current_features.get(feature_id));
+            MCTS.LOGGER.log(Level.INFO, feature_id+": "+MCTS.current_features.get(feature_id));
         }
-        System.out.println("Di_0 features:");
+        MCTS.LOGGER.log(Level.INFO, "Di_0 features:");
         for(Integer feature_id: Di_0.keySet()){
-            System.out.println(feature_id+": "+Di_0.get(feature_id));
+            MCTS.LOGGER.log(Level.INFO, feature_id+": "+Di_0.get(feature_id));
         }*/
-        //System.out.println("\nCalculating DistanceChange");
+        
+        //MCTS.LOGGER.log(Level.INFO, "\nCalculating DistanceChange");
         for (Integer feature_id : Di_0.keySet()) {
-            //System.out.println("feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
+            //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
 
             // this sprite no longer exists after rollout, ignore it
             // this could mean that the avatar hit the sprite, if that's the
@@ -598,16 +588,14 @@ public class SingleTreeNode {
                     || (Di_0.get(feature_id) > 0 && avg_scoreChange > 0)) {
 
                 delta_d += 1 - (Di_f.get(feature_id) / (double) Di_0.get(feature_id));
-                //System.out.println("feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
+                //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
 
-                //System.out.println("Not zero! :"+delta_d);
             } else {
                 delta_d += 0;
             }
 
         }
-
-        //System.out.println("DistanceChange: "+delta_d);
+        //MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
         return delta_d;
     }
     
@@ -634,7 +622,8 @@ public class SingleTreeNode {
             default:
                 break;
         }
-        System.out.println(character);
+        MCTS.LOGGER.log(Level.INFO, character);
+
     }
 
 }
