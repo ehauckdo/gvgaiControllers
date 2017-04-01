@@ -15,6 +15,7 @@ import tools.ElapsedCpuTimer;
 import tools.Utils;
 import tools.Vector2d;
 import util.Util;
+import java.lang.Math;
 
 public class SingleTreeNode {
     
@@ -433,55 +434,25 @@ public class SingleTreeNode {
     public int calculateAction(weightMatrix weightMatrix) {
 
         double[] strenght = new double[num_actions];
-        double sum = 0;
-        int stronghest_id = 0;
-        int weakest_id = 0;
 
         for (int action_id = 0; action_id < num_actions; action_id++) {
             strenght[action_id] = 0;
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
-            // TODO: when calculating actions, you want to consider only the
-            // features immediately visible at this state, not features that
-            // are only going to show up on the 10th state of the rollout
             for (Integer feature_id : this.current_features.keySet()) {
                 strenght[action_id] += currentMap.get(feature_id) * this.current_features.get(feature_id);
             }
-            if(strenght[action_id] >= strenght[stronghest_id]){
-                stronghest_id = action_id;
-            }
-            if(strenght[action_id] <= strenght[weakest_id]){
-                weakest_id = action_id;
-            }
+            // Scale these values down
+            while(strenght[action_id] > 10)
+                strenght[action_id] = strenght[action_id]/10;
         }
         
-        /*MCTS.LOGGER.log(Level.INFO, "\nCalculating Actions... ");
+        //MCTS.LOGGER.log(Level.INFO, "\nCalculating Actions... ");
         for (int action_id = 0; action_id < num_actions; action_id++) {
-            MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
-        }*/
-        
-        double stronghest = strenght[stronghest_id];
-        double weakest = strenght[weakest_id];
-        
-        //if(weakest < 0){
-        for (int action_id = 0; action_id < num_actions; action_id++) {
-            //strenght[action_id] += Math.abs(weakest);
-            strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
+            //MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
         }
-        //}
-        /*MCTS.LOGGER.log(Level.INFO, "\nNormalized Actions... ");
-        for (int action_id = 0; action_id < num_actions; action_id++) {
-            MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
-        }*/
-
-        RandomCollection<Integer> rnd = new RandomCollection<>();
-
-        for (int i = 0; i < num_actions; i++) {
-            rnd.add(strenght[i], i);
-        }
-
-        //return stronghest;
-        return rnd.next();
-
+         
+        return softmax(strenght, num_actions);
+        
     }
 
     private double getKnowledgeChange(StateObservation newState) {
@@ -627,6 +598,25 @@ public class SingleTreeNode {
         }
         MCTS.LOGGER.log(Level.INFO, character);
 
+    }
+    
+    public int softmax(double[] strenght, int size){
+        double sum = 0;
+        for(int i = 0; i < size; i++){
+            sum += Math.pow(Math.E, strenght[i]);   
+        }
+        
+        RandomCollection rc = new RandomCollection();
+        
+        //MCTS.LOGGER.log(Level.INFO, "Actions through Softmax");
+        for(int i = 0; i < size; i++){
+            double value = Math.pow(Math.E, strenght[i])/sum;
+            //MCTS.LOGGER.log(Level.INFO, i+" "+strenght[i]+" --> "+value);
+            rc.add(value, i);
+        }
+        
+        return (int) rc.next();
+        
     }
 
 }
