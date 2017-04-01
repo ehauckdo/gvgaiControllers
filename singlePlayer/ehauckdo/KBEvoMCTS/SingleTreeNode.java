@@ -242,6 +242,7 @@ public class SingleTreeNode {
             MCTS.num_evolutions += 1;
             MCTS.current_bestFitness = newScore;
             MCTS.weightMatrix = mutated_weightmatrix;
+            MCTS.weightMatrix.fitness = newScore;
         }
         
         // New approach
@@ -260,7 +261,7 @@ public class SingleTreeNode {
             //MCTS.LOGGER.log(Level.INFO, "Using score ΔR: " + delta_r);
             return delta_r;
         } else {
-            //MCTS.LOGGER.log(Level.INFO, "Using score ΔZ+ΔR: " + (0.66 * delta_z + 0.33 * delta_d));
+            //MCTS.LOGGER.log(Level.INFO, "Using score ΔZ+ΔD: " + (0.66 * delta_z + 0.33 * delta_d));
             return (0.66 * delta_z + 0.33 * delta_d);
         }
     }
@@ -506,15 +507,12 @@ public class SingleTreeNode {
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
             Event e = events.next();
-
-            // make sure this collision is with player or projectile by player
-            if(e.activeTypeId != newState.getAvatarType() && 
-                    e.passiveTypeId != newState.getAvatarType() &&
-                    !MCTS.player_projectiles.containsKey(e.activeTypeId) && 
-                    !MCTS.player_projectiles.containsKey(e.passiveTypeId))
-                continue;
-            
-            if (MCTS.current_features.containsKey(e.passiveTypeId)) {
+      
+            // check if the sprite collided with is one of those that we keep
+            // track of for calculating ΔZ and ΔD
+            if (MCTS.current_features.containsKey(e.passiveTypeId) ||
+                    MCTS.current_features.containsKey(e.activeTypeId)) {
+                
                 Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
                 //MCTS.LOGGER.log(Level.INFO, "event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
