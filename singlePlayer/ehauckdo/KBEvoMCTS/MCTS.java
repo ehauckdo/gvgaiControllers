@@ -27,7 +27,6 @@ public class MCTS extends CustomController {
     public static Random m_rnd;
     public static int num_actions;
     public static int num_evolutions;
-    public static double current_bestFitness;
 
     public static HashMap<Integer, Double> current_features = new HashMap<>();
     public static weightMatrix weightMatrix;
@@ -83,7 +82,6 @@ public class MCTS extends CustomController {
     public static void simpleSample() {
         //MCTS.LOGGER.log(Level.INFO, "Sampling from collection of "+matrix_collection.map.size()+" matrices"); 
         weightMatrix = matrix_collection.next();
-        current_bestFitness = weightMatrix.fitness;
         matrix_collection.clear();
         /*MCTS.LOGGER.log(Level.INFO, "Chosen:");
         weightMatrix.printMatrix();*/

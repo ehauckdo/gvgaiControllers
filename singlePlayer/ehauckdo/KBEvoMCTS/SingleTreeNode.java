@@ -238,11 +238,10 @@ public class SingleTreeNode {
 
         // if the resulting delta gives best fitness, save the mutated matrix
         // KB FastEVo approach
-        if (newScore > MCTS.current_bestFitness) {
-            MCTS.num_evolutions += 1;
-            MCTS.current_bestFitness = newScore;
+        if (newScore > MCTS.weightMatrix.fitness) {
+            mutated_weightmatrix.fitness = newScore;
             MCTS.weightMatrix = mutated_weightmatrix;
-            MCTS.weightMatrix.fitness = newScore;
+            MCTS.num_evolutions += 1;
         }
         
         // New approach
@@ -438,6 +437,9 @@ public class SingleTreeNode {
         for (int action_id = 0; action_id < num_actions; action_id++) {
             strenght[action_id] = 0;
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
+            // TODO: when calculating actions, you want to consider only the
+            // features immediately visible at this state, not features that
+            // are only going to show up on the 10th state of the rollout
             for (Integer feature_id : MCTS.current_features.keySet()) {
                 strenght[action_id] += currentMap.get(feature_id) * MCTS.current_features.get(feature_id);
             }
