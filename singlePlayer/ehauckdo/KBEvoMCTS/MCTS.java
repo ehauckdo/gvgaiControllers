@@ -28,9 +28,7 @@ public class MCTS extends CustomController {
     public static int num_actions;
     public static int num_evolutions;
 
-    public static HashMap<Integer, Double> current_features = new HashMap<>();
     public static weightMatrix weightMatrix;
-
     public static RandomCollection<weightMatrix> matrix_collection = new RandomCollection<>();
 
     public static KnowledgeBase knowledgeBase = new KnowledgeBase();
@@ -52,13 +50,6 @@ public class MCTS extends CustomController {
         //Set the game observation to a newly root node.
         m_root = new SingleTreeNode(stateObs, m_rnd, num_actions, actions);
         
-        current_features = m_root.getFeatures(stateObs);
-        /*MCTS.LOGGER.log(Level.INFO, "current_features:");
-        for(Integer i: current_features.keySet()){
-            MCTS.LOGGER.log(Level.INFO, i+":"+current_features.get(i));
-        }*/
-        weightMatrix.updateMapping(current_features);
-
         //Do the search within the available time.
         m_root.mctsSearch(elapsedTimer);
 

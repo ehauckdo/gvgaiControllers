@@ -38,6 +38,7 @@ public class SingleTreeNode {
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public double K = Math.sqrt(2);
     public int iterations = 0;
+    public HashMap<Integer, Double> current_features = new HashMap<>();
 
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
@@ -56,6 +57,8 @@ public class SingleTreeNode {
         } else {
             m_depth = 0;
         }
+        this.current_features = getFeatures(state);
+        MCTS.weightMatrix.updateMapping(this.current_features);
     }
 
     public void mctsSearch(ElapsedCpuTimer elapsedTimer) {
@@ -216,7 +219,7 @@ public class SingleTreeNode {
 
             // insert new weights in the matrix for any new features  
             // which showed up on this new state
-            mutated_weightmatrix.updateMapping(MCTS.current_features);
+            mutated_weightmatrix.updateMapping(this.current_features);
 
             // use mutated matrix to calculate next action for the rollout
             int action = calculateAction(mutated_weightmatrix);
@@ -374,12 +377,12 @@ public class SingleTreeNode {
     }
 
     public void queryState(StateObservation stateObs) {
-        MCTS.current_features.clear();
+        this.current_features.clear();
         HashMap<Integer, Double> features = getFeatures(stateObs);
-        MCTS.current_features = features;
+        this.current_features = features;
     }
 
-    public HashMap<Integer, Double> getFeatures(StateObservation stateObs) {
+    private HashMap<Integer, Double> getFeatures(StateObservation stateObs) {
         HashMap<Integer, Double> features = new HashMap();
         Vector2d playerPosition = stateObs.getAvatarPosition();
         ArrayList<Observation>[] observationLists;
@@ -440,8 +443,8 @@ public class SingleTreeNode {
             // TODO: when calculating actions, you want to consider only the
             // features immediately visible at this state, not features that
             // are only going to show up on the 10th state of the rollout
-            for (Integer feature_id : MCTS.current_features.keySet()) {
-                strenght[action_id] += currentMap.get(feature_id) * MCTS.current_features.get(feature_id);
+            for (Integer feature_id : this.current_features.keySet()) {
+                strenght[action_id] += currentMap.get(feature_id) * this.current_features.get(feature_id);
             }
             if(strenght[action_id] >= strenght[stronghest_id]){
                 stronghest_id = action_id;
@@ -512,8 +515,8 @@ public class SingleTreeNode {
       
             // check if the sprite collided with is one of those that we keep
             // track of for calculating ΔZ and ΔD
-            if (MCTS.current_features.containsKey(e.passiveTypeId) ||
-                    MCTS.current_features.containsKey(e.activeTypeId)) {
+            if (this.current_features.containsKey(e.passiveTypeId) ||
+                    this.current_features.containsKey(e.activeTypeId)) {
                 
                 Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
@@ -561,9 +564,9 @@ public class SingleTreeNode {
         HashMap<Integer, Double> Di_0 = getFeatures(this.state);
         HashMap<Integer, Double> Di_f = getFeatures(stateObs);
 
-        /*MCTS.LOGGER.log(Level.INFO, "MCTS.current_features:");
-        for(Integer feature_id: MCTS.current_features.keySet()){
-            MCTS.LOGGER.log(Level.INFO, feature_id+": "+MCTS.current_features.get(feature_id));
+        /*MCTS.LOGGER.log(Level.INFO, "this.current_features:");
+        for(Integer feature_id: this.current_features.keySet()){
+            MCTS.LOGGER.log(Level.INFO, feature_id+": "+this.current_features.get(feature_id));
         }
         MCTS.LOGGER.log(Level.INFO, "Di_0 features:");
         for(Integer feature_id: Di_0.keySet()){
