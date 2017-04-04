@@ -16,12 +16,13 @@ import tools.Utils;
 import tools.Vector2d;
 import util.Util;
 import java.lang.Math;
+import org.apache.log4j.Priority;
 
 public class SingleTreeNode {
     
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
-    public final int ROLLOUT_DEPTH = 20;
+    public final int ROLLOUT_DEPTH = 10;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
     public Random m_rnd;
@@ -90,7 +91,7 @@ public class SingleTreeNode {
             iterations++;
         }
 
-        MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
+        //MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
 
         /*
         System.out.println("Average time:" + avgTimeTaken);
@@ -142,7 +143,7 @@ public class SingleTreeNode {
     public SingleTreeNode uct() {
 
         SingleTreeNode selected = null;
-        double bestValue = -Double.MAX_VALUE;
+        double bestValue = -Double.MAX_VALUE;  
         for (SingleTreeNode child : this.children) {
             double hvVal = child.totValue;
             double childValue = hvVal / (child.nVisits + this.epsilon);
@@ -403,17 +404,6 @@ public class SingleTreeNode {
         // If there is Portals on this game
         observationLists = stateObs.getPortalsPositions(playerPosition);
         probeObservationList(observationLists, features);
-        
-        // Update typeIds of player projectiles, this could probably be handled 
-        // in a more fashonable way
-        observationLists = stateObs.getFromAvatarSpritesPositions();
-        if (observationLists != null) {
-            for (ArrayList<Observation> list : observationLists) {
-                for(Observation obs : list){
-                    MCTS.player_projectiles.put(obs.itype, 0);
-                }
-            }
-        }
 
         return features;
     }
@@ -421,7 +411,7 @@ public class SingleTreeNode {
     private void probeObservationList(ArrayList<Observation>[] observationLists, HashMap<Integer, Double> features){
         if (observationLists != null) {
             for (ArrayList<Observation> list : observationLists) {
-                if (!list.isEmpty()) {
+                if (!list.isEmpty() && list.get(0).sqDist > 0) {
                     Observation obs = list.get(0);
                     features.put(obs.itype, obs.sqDist);
                     //MCTS.LOGGER.log(Level.INFO, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
