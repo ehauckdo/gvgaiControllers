@@ -40,12 +40,12 @@ public class MCTS extends CustomController {
         this.actions = actions;
         m_rnd = a_rnd;
         weightMatrix = new weightMatrix(num_actions);
-        LOGGER.setLevel(Level.INFO);
+        LOGGER.setLevel(Level.WARN);   
     }
 
     @Override
     public Types.ACTIONS act(StateObservation stateObs, ElapsedCpuTimer elapsedTimer) {
-          
+        
         //Set the game observation to a newly root node.
         m_root = new SingleTreeNode(stateObs, m_rnd, num_actions, actions);
         
@@ -59,7 +59,7 @@ public class MCTS extends CustomController {
         //}
 
         //Determine the best action to take and return it.
-        int action = m_root.mostVisitedAction();
+        int action = m_root.getNextAction();
         return actions[action];
     }
 

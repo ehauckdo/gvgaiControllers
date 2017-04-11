@@ -1,5 +1,6 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
+import core.game.Observation;
 import java.util.HashMap;
 import org.apache.log4j.Level;
 
@@ -77,12 +78,12 @@ public class weightMatrix {
         return mutatedWeightMatrix;
     }
 
-    public void updateMapping(HashMap<Integer, Double> features) {
+    public void updateMapping(HashMap<Integer, Observation> features) {
         for (HashMap<Integer, Double> actionKey_hashMap : actionHashMap) {
             for (Integer feature_id : features.keySet()) {
                 if(actionKey_hashMap.get(feature_id) == null){
                     actionKey_hashMap.put(feature_id, 1.0);
-                    mapped_features.put(feature_id, features.get(feature_id));
+                    mapped_features.put(feature_id, features.get(feature_id).sqDist);
                 }
             }
         }

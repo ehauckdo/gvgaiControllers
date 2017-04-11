@@ -10,13 +10,11 @@ import java.util.Iterator;
 import java.util.TreeSet;
 import ontology.Types;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
 import tools.Vector2d;
 import util.Util;
 import java.lang.Math;
-import org.apache.log4j.Priority;
 
 public class SingleTreeNode {
     
@@ -40,7 +38,7 @@ public class SingleTreeNode {
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public double K = Math.sqrt(2);
     public int iterations = 0;
-    public HashMap<Integer, Double> current_features = new HashMap<>();
+    public HashMap<Integer, Observation> current_features = new HashMap<>();
 
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
@@ -67,15 +65,17 @@ public class SingleTreeNode {
 
         double avgTimeTaken = 0;
         double acumTimeTaken = 0;
+        //double lastTimeTaken = 0 ;
         long remaining = elapsedTimer.remainingTimeMillis();
         int numIters = 0;
 
-        int remainingLimit = 5;
+        int remainingLimit = 6;
 
         double delta = 0;
         MCTS.num_evolutions = 0;
 
         while (remaining > 2 * avgTimeTaken && remaining > remainingLimit) {
+            //lastTimeTaken = elapsedTimer.remainingTimeMillis();
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
             SingleTreeNode selected = treePolicy();
 
@@ -87,14 +87,19 @@ public class SingleTreeNode {
 
             avgTimeTaken = acumTimeTaken / numIters;
             remaining = elapsedTimer.remainingTimeMillis();
-            //System.out.println(elapsedTimerIteration.elapsedMillis() + " --> " + acumTimeTaken + " (" + remaining + ")");
             iterations++;
+            
+            //System.out.println(elapsedTimerIteration.elapsedMillis() + " --> " + acumTimeTaken + " (" + remaining + ")");
+            //MCTS.LOGGER.log(Level.WARN, "LastTimeTaken: "+(lastTimeTaken-elapsedTimer.remainingTimeMillis()));
         }
 
-        //MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions);
-
+        MCTS.LOGGER.log(Level.WARN, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions+", Average time: "+String.format("%.2f", avgTimeTaken)+",Cumulative time: "+ String.format("%.2f", acumTimeTaken));
+      
+        //MCTS.LOGGER.log(Level.WARN, "Average time:" + avgTimeTaken + ",Cumulative time:"+acumTimeTaken);
+        //if(remaining < 6){
+        //    MCTS.LOGGER.log(Level.WARN, "Remaining: "+remaining+", Average time:" + avgTimeTaken);  
+        //}
         /*
-        System.out.println("Average time:" + avgTimeTaken);
         System.out.println("Cumulative time:"+acumTimeTaken);
         System.out.println("Highest delta: "+delta);
          */
@@ -149,7 +154,7 @@ public class SingleTreeNode {
             double childValue = hvVal / (child.nVisits + this.epsilon);
 
             childValue = Utils.normalise(childValue, bounds[0], bounds[1]);
-
+            
             double uctValue = childValue
                     + K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
 
@@ -207,11 +212,12 @@ public class SingleTreeNode {
         
         //MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
         //MCTS.weightMatrix.printMatrix();
+        ArrayList<Integer> chosenActions = new ArrayList();
         
         // get a new mutated weight matrix 
         weightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
         
-        // MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
+        //MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
         //mutated_weightmatrix.printMatrix();
 
         while (!finishRollout(rollerState, thisDepth)) {
@@ -222,29 +228,42 @@ public class SingleTreeNode {
             // insert new weights in the matrix for any new features  
             // which showed up on this new state
             mutated_weightmatrix.updateMapping(this.current_features);
-
+            
             // use mutated matrix to calculate next action for the rollout
             int action = calculateAction(mutated_weightmatrix);
+            chosenActions.add(action);
             
-            //int action = m_rnd.nextInt(num_actions);
-            
-            //printAction(actions[action]);
-
             //int action = m_rnd.nextInt(num_actions);
             rollerState.advance(actions[action]);
             thisDepth++;
         }
+        
+        String chosenActionsLog = "";
+        for(Integer i: chosenActions){
+            chosenActionsLog += printAction(actions[i]);
+        }
+        //MCTS.LOGGER.log(Level.WARN, chosenActionsLog);
 
         double newScore = value(rollerState);
         double delta_r = newScore - this.state.getGameScore();
 
         double delta_z = getKnowledgeChange(rollerState);
         double delta_d = dsChange(rollerState);
+        
+        double delta_final = 0;
+        
+        if (delta_r != 0) {
+            MCTS.LOGGER.log(Level.WARN, "Using score ΔR: " + delta_r);
+            delta_final = delta_r;
+        } else {
+            MCTS.LOGGER.log(Level.WARN, String.format("Using score ΔZ+ΔD: %.3f", (0.66 * delta_z + 0.33 * delta_d)));
+            delta_final = (0.66 * delta_z) + (0.33 * delta_d);
+        }
 
         // if the resulting delta gives best fitness, save the mutated matrix
         // KB FastEVo approach
-        if (newScore > MCTS.weightMatrix.fitness) {
-            mutated_weightmatrix.fitness = newScore;
+        if (delta_final > MCTS.weightMatrix.fitness) {
+            mutated_weightmatrix.fitness = delta_final;
             MCTS.weightMatrix = mutated_weightmatrix;
             MCTS.num_evolutions += 1;
         }
@@ -253,21 +272,15 @@ public class SingleTreeNode {
         /*mutated_weightmatrix.fitness = newScore;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble()); 
         MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);*/
 
-        if (delta_r < bounds[0]) {
-            bounds[0] = delta_r;
+        if (delta_final < bounds[0]) {
+            bounds[0] = delta_final;
         }
 
-        if (delta_r > bounds[1]) {
-            bounds[1] = delta_r;
+        if (delta_final > bounds[1]) {
+            bounds[1] = delta_final;
         }
 
-        if (delta_r != 0) {
-            //MCTS.LOGGER.log(Level.INFO, "Using score ΔR: " + delta_r);
-            return delta_r;
-        } else {
-            //MCTS.LOGGER.log(Level.INFO, "Using score ΔZ+ΔD: " + (0.66 * delta_z + 0.33 * delta_d));
-            return (0.66 * delta_z + 0.33 * delta_d);
-        }
+        return delta_final;
     }
 
     public double value(StateObservation a_gameState) {
@@ -309,13 +322,19 @@ public class SingleTreeNode {
             n = n.parent;
         }
     }
+    
+    public int getNextAction(){
+        //return bestAction();
+        return mostVisitedAction();
+    }
 
     public int mostVisitedAction() {
         int selected = -1;
         double bestValue = -Double.MAX_VALUE;
         boolean allEqual = true;
         double first = -1;
-
+        
+        //String log = "";
         for (int i = 0; i < children.length; i++) {
 
             if (children[i] != null) {
@@ -331,6 +350,7 @@ public class SingleTreeNode {
                     bestValue = childValue;
                     selected = i;
                 }
+                //log += String.format(printAction(actions[i])+"%.2f, %.2f; ", childValue, children[i].totValue);
             }
         }
 
@@ -341,6 +361,8 @@ public class SingleTreeNode {
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
+        //MCTS.LOGGER.log(Level.WARN, log);
+        //MCTS.LOGGER.log(Level.WARN, "Selected: "+printAction(actions[selected]));
         return selected;
     }
 
@@ -380,43 +402,71 @@ public class SingleTreeNode {
 
     public void queryState(StateObservation stateObs) {
         this.current_features.clear();
-        HashMap<Integer, Double> features = getFeatures(stateObs);
+        HashMap<Integer, Observation> features = getFeatures(stateObs);
         this.current_features = features;
     }
+    
+    private HashMap<Integer, Observation> getFeatures(StateObservation stateObs) {
+        HashMap<Integer, Observation> features = new HashMap();
+        Vector2d playerPos= stateObs.getAvatarPosition();
+        MCTS.LOGGER.log(Level.INFO, "Player: "+playerPos.x+","+playerPos.y);
 
-    private HashMap<Integer, Double> getFeatures(StateObservation stateObs) {
-        HashMap<Integer, Double> features = new HashMap();
-        Vector2d playerPosition = stateObs.getAvatarPosition();
-        ArrayList<Observation>[] observationLists;
+        //MCTS.LOGGER.log(Level.INFO,"NPCS:");
+        probeNearest(stateObs.getNPCPositions(playerPos), features);
 
-        // If there is NPCs on this game
-        observationLists = stateObs.getNPCPositions(playerPosition);
-        probeObservationList(observationLists, features);
+        //MCTS.LOGGER.log(Level.INFO,"Movable:");
+        probeNearest(stateObs.getMovablePositions(playerPos), features);
 
-        // If there is Movable on this game
-        observationLists = stateObs.getMovablePositions(playerPosition);
-        probeObservationList(observationLists, features);
+        //MCTS.LOGGER.log(Level.INFO,"Resources:");
+        probeNearest(stateObs.getResourcesPositions(playerPos), features);
 
-        // If there is Resources on this game
-        observationLists = stateObs.getResourcesPositions(playerPosition);
-        probeObservationList(observationLists, features);
-
-        // If there is Portals on this game
-        observationLists = stateObs.getPortalsPositions(playerPosition);
-        probeObservationList(observationLists, features);
+        //MCTS.LOGGER.log(Level.INFO,"Portals:");
+        probeNearest(stateObs.getPortalsPositions(playerPos), features);
 
         return features;
     }
     
-    private void probeObservationList(ArrayList<Observation>[] observationLists, HashMap<Integer, Double> features){
+    private void probeNearest(ArrayList<Observation>[] observationLists, HashMap<Integer, Observation> features){
         if (observationLists != null) {
             for (ArrayList<Observation> list : observationLists) {
                 if (!list.isEmpty() && list.get(0).sqDist > 0) {
-                    Observation obs = list.get(0);
-                    features.put(obs.itype, obs.sqDist);
-                    //MCTS.LOGGER.log(Level.INFO, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
+                   Observation obs = list.get(0);
+                    features.put(obs.itype, obs);
+                    MCTS.LOGGER.log(Level.INFO, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
                 }
-                break;
+            }
+        }
+    }
+    
+    private HashMap<Integer, Observation> getUpdatedFeatures(StateObservation stateObs, HashMap<Integer, Observation> features) {
+        HashMap<Integer, Observation> updatedFeatures = new HashMap();
+        HashMap<Integer, Observation> allDistances = getAllDistances(stateObs);
+        
+        for(Integer typeId: features.keySet()){
+            Observation obs = allDistances.get(features.get(typeId).obsID);
+            if(obs != null){
+                updatedFeatures.put(typeId, obs);
+            }
+        }
+        return updatedFeatures;
+    }
+    
+    private HashMap<Integer, Observation> getAllDistances(StateObservation stateObs) {
+        HashMap<Integer, Observation> allDistances = new HashMap();
+        Vector2d playerPos = stateObs.getAvatarPosition();
+        probeAll(stateObs.getNPCPositions(playerPos), allDistances);
+        probeAll(stateObs.getMovablePositions(playerPos), allDistances);
+        probeAll(stateObs.getResourcesPositions(playerPos), allDistances);
+        probeAll(stateObs.getPortalsPositions(playerPos), allDistances);
+        return allDistances;
+    }
+    
+    private void probeAll(ArrayList<Observation>[] observationLists, HashMap<Integer, Observation> features){
+        if (observationLists != null) {
+            for (ArrayList<Observation> list : observationLists) {
+                for(Observation obs: list){
+                    features.put(obs.obsID, obs);
+                }
             }
         }
     }
@@ -424,23 +474,30 @@ public class SingleTreeNode {
     public int calculateAction(weightMatrix weightMatrix) {
 
         double[] strenght = new double[num_actions];
+        double stronghest = HUGE_NEGATIVE;
+        double weakest = HUGE_POSITIVE;
 
         for (int action_id = 0; action_id < num_actions; action_id++) {
             strenght[action_id] = 0;
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
             for (Integer feature_id : this.current_features.keySet()) {
-                strenght[action_id] += currentMap.get(feature_id) * this.current_features.get(feature_id);
+                strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
             }
-            // Scale these values down
-            while(strenght[action_id] > 10)
-                strenght[action_id] = strenght[action_id]/10;
+            /*if(strenght[action_id] > stronghest)
+                stronghest = strenght[action_id];
+            if(strenght[action_id] < weakest)
+                weakest = strenght[action_id];*/
         }
         
         //MCTS.LOGGER.log(Level.INFO, "\nCalculating Actions... ");
-        for (int action_id = 0; action_id < num_actions; action_id++) {
-            //MCTS.LOGGER.log(Level.INFO, "Strenght action "+action_id+": "+strenght[action_id]);
-        }
-         
+        //for (int action_id = 0; action_id < num_actions; action_id++) {
+            //strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
+            //MCTS.LOGGER.log(Level.WARN, "Strenght action "+action_id+": "+strenght[action_id]);
+        //}  
+           
+        //double[] mystrenght = {215.696, 215.696, 210.19327911886418, 253.05181801364353};
+        //softmax(mystrenght, 4);
+        
         return softmax(strenght, num_actions);
         
     }
@@ -503,6 +560,7 @@ public class SingleTreeNode {
         //Compare with previous events
         //MCTS.LOGGER.log(Level.INFO, "Calculating KnoweldgeChange");
         for (Integer id : eventsHashMap.keySet()) {
+            //MCTS.LOGGER.log(Level.INFO, "Feature: "+id);
             int Zi0 = MCTS.knowledgeBase.getOcurrences(id);
             int Zif = Zi0 + eventsHashMap.get(id);
             if (Zi0 == 0) {
@@ -510,61 +568,60 @@ public class SingleTreeNode {
                 // Ki = Zif
                 knowledgeChange += Zif;
             } else {
-                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += (Zif / (double) Zi0) - 1 = " + (((Zif + Zi0) / (double) Zi0) - 1));
-                // Ki = Kif/Ki0 - 1
-                knowledgeChange += ((Zif + Zi0) / (double) Zi0) - 1;
+                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += (Zif / (double) Zi0) - 1 = (" +Zif+" / "+Zi0+")-1");
+                //Ki = Zif/Zi0 - 1
+                knowledgeChange += (Zif  / (double) Zi0) - 1;
             }
 
         }
-        //MCTS.LOGGER.log(Level.INFO, "KnowledgeChange: "+knowledgeChange);
+        //MCTS.LOGGER.log(Level.WARN, "KnowledgeChange: "+knowledgeChange);
         return knowledgeChange;
     }
 
     private double dsChange(StateObservation stateObs) {
         double delta_d = 0;
-        HashMap<Integer, Double> Di_0 = getFeatures(this.state);
-        HashMap<Integer, Double> Di_f = getFeatures(stateObs);
-
-        /*MCTS.LOGGER.log(Level.INFO, "this.current_features:");
-        for(Integer feature_id: this.current_features.keySet()){
-            MCTS.LOGGER.log(Level.INFO, feature_id+": "+this.current_features.get(feature_id));
-        }
-        MCTS.LOGGER.log(Level.INFO, "Di_0 features:");
-        for(Integer feature_id: Di_0.keySet()){
-            MCTS.LOGGER.log(Level.INFO, feature_id+": "+Di_0.get(feature_id));
-        }*/
-        
+        HashMap<Integer, Observation> Di_0 = getFeatures(this.state);
+        HashMap<Integer, Observation> Di_f = getUpdatedFeatures(stateObs, Di_0);
+    
         //MCTS.LOGGER.log(Level.INFO, "\nCalculating DistanceChange");
         for (Integer feature_id : Di_0.keySet()) {
-            //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
-
-            // this sprite no longer exists after rollout, ignore it
-            // this could mean that the avatar hit the sprite, if that's the
-            // case, we can just rely on the score change to move the avatar
-            if (Di_f.get(feature_id) == null) {
-                continue;
-            }
+         
+            //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id).sqDist+", "+"Di_f: "+Di_f.get(feature_id).sqDist);
 
             int occurrences = MCTS.knowledgeBase.getOcurrences(feature_id);
             double avg_scoreChange = MCTS.knowledgeBase.getAvgScoreChange(feature_id);
 
             if (occurrences == 0
-                    || (Di_0.get(feature_id) > 0 && avg_scoreChange > 0)) {
+                    || (Di_0.get(feature_id).sqDist > 0 && avg_scoreChange > 0)) {
 
-                delta_d += 1 - (Di_f.get(feature_id) / (double) Di_0.get(feature_id));
-                //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id)+", "+"Di_f: "+Di_f.get(feature_id));
-
+                Observation obs_f = Di_f.get(feature_id);
+                int Di_0_obsID = Di_0.get(feature_id).obsID;
+                double Di_0_euDist = Math.sqrt(Di_0.get(feature_id).sqDist);
+                //MCTS.LOGGER.log(Level.WARN, Di_0_obsID+", "+feature_id+": "+Di_0_euDist);
+                
+                double Di_f_euDist = 0;
+                String Di_f_obsID = "null";
+                if(obs_f != null){
+                    Di_f_obsID = String.valueOf(Di_f.get(feature_id).obsID);
+                    Di_f_euDist = Math.sqrt(Di_f.get(feature_id).sqDist);
+                }
+                //MCTS.LOGGER.log(Level.WARN, Di_f_obsID+", "+feature_id+": "+Di_f_euDist);
+    
+                delta_d += 1 - (Di_f_euDist / (double)Di_0_euDist);
+                //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id).sqDist+", "+"Di_f: "+Di_fFinal);
             } else {
                 delta_d += 0;
             }
 
         }
-        //MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
+        //MCTS.LOGGER.log(Level.WARN, "DistanceChange: "+delta_d);
+        //if(delta_d < 0)
+        //    delta_d = 0;
         return delta_d;
     }
     
 
-    public void printAction(Types.ACTIONS action){
+    public String printAction(Types.ACTIONS action){
         String character = "";
         if(null != action)
             switch (action) {
@@ -586,27 +643,33 @@ public class SingleTreeNode {
             default:
                 break;
         }
-        MCTS.LOGGER.log(Level.INFO, character);
-
+        return character;
     }
     
     public int softmax(double[] strenght, int size){
         double sum = 0;
         for(int i = 0; i < size; i++){
-            sum += Math.pow(Math.E, strenght[i]);   
+            sum += Math.pow(Math.E, -strenght[i]);   
         }
-        
         RandomCollection rc = new RandomCollection();
         
         //MCTS.LOGGER.log(Level.INFO, "Actions through Softmax");
         for(int i = 0; i < size; i++){
-            double value = Math.pow(Math.E, strenght[i])/sum;
-            //MCTS.LOGGER.log(Level.INFO, i+" "+strenght[i]+" --> "+value);
+            double value = Math.pow(Math.E, -strenght[i])/sum;
+            //MCTS.LOGGER.log(Level.WARN, i+" "+strenght[i]+" --> "+value);
             rc.add(value, i);
         }
         
+        /*int[] results = {0, 0, 0, 0};
+        for(int i =0; i < 100; i++){
+            results[(int)rc.next()] += 1;
+        }
+        for(int i =0; i < size; i++){
+            System.out.println(i+": "+results[i]);
+        }*/
         return (int) rc.next();
         
     }
+    
 
 }
