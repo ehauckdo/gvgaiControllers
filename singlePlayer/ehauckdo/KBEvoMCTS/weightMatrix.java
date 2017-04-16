@@ -1,8 +1,10 @@
 package controllers.singlePlayer.ehauckdo.KBEvoMCTS;
 
 import core.game.Observation;
+import core.game.StateObservation;
 import java.util.HashMap;
 import org.apache.log4j.Level;
+import util.Util;
 
 /**
  *
@@ -78,12 +80,15 @@ public class weightMatrix {
         return mutatedWeightMatrix;
     }
 
-    public void updateMapping(HashMap<Integer, Observation> features) {
+    public void updateMapping(HashMap<Integer, Observation> features, StateObservation stateObs) {
         for (HashMap<Integer, Double> actionKey_hashMap : actionHashMap) {
             for (Integer feature_id : features.keySet()) {
                 if(actionKey_hashMap.get(feature_id) == null){
                     actionKey_hashMap.put(feature_id, 1.0);
-                    mapped_features.put(feature_id, features.get(feature_id).sqDist);
+                    Observation obs = features.get(feature_id);
+                    //mapped_features.put(feature_id, features.get(feature_id).sqDist);
+                    mapped_features.put(feature_id, Util.calculateGridDistance(obs.position,
+                                obs.reference, stateObs.getBlockSize()));
                 }
             }
         }

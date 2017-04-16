@@ -15,6 +15,7 @@ import tools.Utils;
 import tools.Vector2d;
 import util.Util;
 import java.lang.Math;
+import static util.Util.calculateGridDistance;
 
 public class SingleTreeNode {
     
@@ -59,7 +60,7 @@ public class SingleTreeNode {
             m_depth = 0;
         }
         this.current_features = getFeatures(state);
-        MCTS.weightMatrix.updateMapping(this.current_features);
+        MCTS.weightMatrix.updateMapping(this.current_features, state);
         this.ID = MCTS.ID++;
     }
 
@@ -234,7 +235,7 @@ public class SingleTreeNode {
 
             // insert new weights in the matrix for any new features  
             // which showed up on this new state
-            mutated_weightmatrix.updateMapping(this.current_features);
+            mutated_weightmatrix.updateMapping(this.current_features, rollerState);
             
             // use mutated matrix to calculate next action for the rollout
             int action = calculateAction(mutated_weightmatrix);
@@ -496,7 +497,11 @@ public class SingleTreeNode {
             strenght[action_id] = 0;
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
             for (Integer feature_id : this.current_features.keySet()) {
-                strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
+                Observation obs = this.current_features.get(feature_id);
+                double euDist = calculateGridDistance(obs.position, obs.reference, this.state.getBlockSize());
+                //strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
+                strenght[action_id] += currentMap.get(feature_id) * euDist;
+
             }
             /*if(strenght[action_id] > stronghest)
                 stronghest = strenght[action_id];
@@ -504,11 +509,11 @@ public class SingleTreeNode {
                 weakest = strenght[action_id];*/
         }
         
-        //MCTS.LOGGER.log(Level.INFO, "\nCalculating Actions... ");
-        //for (int action_id = 0; action_id < num_actions; action_id++) {
-            //strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
-            //MCTS.LOGGER.log(Level.WARN, "Strenght action "+action_id+": "+strenght[action_id]);
-        //}  
+        MCTS.LOGGER.log(Level.WARN, "\nCalculating Actions... ");
+        for (int action_id = 0; action_id < num_actions; action_id++) {
+            strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
+            MCTS.LOGGER.log(Level.WARN, "Strenght action "+action_id+": "+strenght[action_id]);
+        }  
            
         //double[] mystrenght = {215.696, 215.696, 210.19327911886418, 253.05181801364353};
         //softmax(mystrenght, 4);
@@ -597,10 +602,14 @@ public class SingleTreeNode {
         double delta_d = 0;
         HashMap<Integer, Observation> Di_0 = getFeatures(this.state);
         HashMap<Integer, Observation> Di_f = getUpdatedFeatures(stateObs, Di_0);
+        double blockSize = stateObs.getBlockSize();
     
-        //MCTS.LOGGER.log(Level.INFO, "\nCalculating DistanceChange");
+        MCTS.LOGGER.log(Level.INFO, "\nCalculating DistanceChange");
         for (Integer feature_id : Di_0.keySet()) {
-         
+            
+            double Di_0_test = calculateGridDistance(Di_0.get(feature_id).position, Di_0.get(feature_id).reference, blockSize);
+            //double Di_f_test = calculateDistance(Di_f.get(feature_id).position, Di_f.get(feature_id).reference, blockSize);
+   
             //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id).sqDist+", "+"Di_f: "+Di_f.get(feature_id).sqDist);
 
             int occurrences = MCTS.knowledgeBase.getOcurrences(feature_id);
@@ -609,18 +618,19 @@ public class SingleTreeNode {
             if (occurrences == 0
                     || (Di_0.get(feature_id).sqDist > 0 && avg_scoreChange > 0)) {
 
+                Observation obs_0 = Di_0.get(feature_id);
                 Observation obs_f = Di_f.get(feature_id);
                 int Di_0_obsID = Di_0.get(feature_id).obsID;
-                double Di_0_euDist = Math.sqrt(Di_0.get(feature_id).sqDist);
-                //MCTS.LOGGER.log(Level.WARN, Di_0_obsID+", "+feature_id+": "+Di_0_euDist);
+                double Di_0_euDist = calculateGridDistance(obs_0.position, obs_0.reference, blockSize);
+                MCTS.LOGGER.log(Level.INFO, Di_0_obsID+", "+feature_id+": "+Di_0_euDist);
                 
                 double Di_f_euDist = 0;
                 String Di_f_obsID = "null";
                 if(obs_f != null){
                     Di_f_obsID = String.valueOf(Di_f.get(feature_id).obsID);
-                    Di_f_euDist = Math.sqrt(Di_f.get(feature_id).sqDist);
+                    Di_f_euDist = calculateGridDistance(obs_f.position, obs_f.reference, blockSize);
                 }
-                //MCTS.LOGGER.log(Level.WARN, Di_f_obsID+", "+feature_id+": "+Di_f_euDist);
+                MCTS.LOGGER.log(Level.INFO, Di_f_obsID+", "+feature_id+": "+Di_f_euDist);
     
                 delta_d += 1 - (Di_f_euDist / (double)Di_0_euDist);
                 //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id).sqDist+", "+"Di_f: "+Di_fFinal);
@@ -629,7 +639,7 @@ public class SingleTreeNode {
             }
 
         }
-        //MCTS.LOGGER.log(Level.WARN, "DistanceChange: "+delta_d);
+        MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
         //if(delta_d < 0)
         //    delta_d = 0;
         return delta_d;
@@ -671,7 +681,7 @@ public class SingleTreeNode {
         //MCTS.LOGGER.log(Level.INFO, "Actions through Softmax");
         for(int i = 0; i < size; i++){
             double value = Math.pow(Math.E, -strenght[i])/sum;
-            //MCTS.LOGGER.log(Level.WARN, i+" "+strenght[i]+" --> "+value);
+            MCTS.LOGGER.log(Level.WARN, i+" "+strenght[i]+" --> "+value);
             rc.add(value, i);
         }
         
@@ -685,6 +695,5 @@ public class SingleTreeNode {
         return (int) rc.next();
         
     }
-    
-
+      
 }
