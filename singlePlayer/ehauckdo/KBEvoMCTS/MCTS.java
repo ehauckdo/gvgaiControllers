@@ -21,7 +21,7 @@ import tools.ElapsedCpuTimer;
 public class MCTS extends CustomController {
 
     static final Logger LOGGER = Logger.getLogger(MCTS.class.getName());
-
+    public static int ID = 0;
     public SingleTreeNode m_root;
 
     public static Random m_rnd;
@@ -40,7 +40,7 @@ public class MCTS extends CustomController {
         this.actions = actions;
         m_rnd = a_rnd;
         weightMatrix = new weightMatrix(num_actions);
-        LOGGER.setLevel(Level.WARN);   
+        LOGGER.setLevel(Level.ERROR);   
     }
 
     @Override

@@ -35,11 +35,12 @@ public class SingleTreeNode {
     private int m_depth;
     public int num_actions;
 
-    protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
+    protected double[] bounds = new double[]{HUGE_POSITIVE, HUGE_NEGATIVE};
     public double K = Math.sqrt(2);
     public int iterations = 0;
     public HashMap<Integer, Observation> current_features = new HashMap<>();
-
+    public int ID;
+    
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
     }
@@ -59,6 +60,7 @@ public class SingleTreeNode {
         }
         this.current_features = getFeatures(state);
         MCTS.weightMatrix.updateMapping(this.current_features);
+        this.ID = MCTS.ID++;
     }
 
     public void mctsSearch(ElapsedCpuTimer elapsedTimer) {
@@ -90,14 +92,14 @@ public class SingleTreeNode {
             iterations++;
             
             //System.out.println(elapsedTimerIteration.elapsedMillis() + " --> " + acumTimeTaken + " (" + remaining + ")");
-            //MCTS.LOGGER.log(Level.WARN, "LastTimeTaken: "+(lastTimeTaken-elapsedTimer.remainingTimeMillis()));
+            //MCTS.LOGGER.log(Level.INFO, "LastTimeTaken: "+(lastTimeTaken-elapsedTimer.remainingTimeMillis()));
         }
 
-        MCTS.LOGGER.log(Level.WARN, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions+", Average time: "+String.format("%.2f", avgTimeTaken)+",Cumulative time: "+ String.format("%.2f", acumTimeTaken));
+        MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions+", Average time: "+String.format("%.2f", avgTimeTaken)+",Cumulative time: "+ String.format("%.2f", acumTimeTaken));
       
-        //MCTS.LOGGER.log(Level.WARN, "Average time:" + avgTimeTaken + ",Cumulative time:"+acumTimeTaken);
+        MCTS.LOGGER.log(Level.INFO, "Average time:" + avgTimeTaken + ",Cumulative time:"+acumTimeTaken);
         //if(remaining < 6){
-        //    MCTS.LOGGER.log(Level.WARN, "Remaining: "+remaining+", Average time:" + avgTimeTaken);  
+        //    MCTS.LOGGER.log(Level.INFO, "Remaining: "+remaining+", Average time:" + avgTimeTaken);  
         //}
         /*
         System.out.println("Cumulative time:"+acumTimeTaken);
@@ -149,12 +151,17 @@ public class SingleTreeNode {
 
         SingleTreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;  
+        MCTS.LOGGER.log(Level.INFO, "Calculating UCT");
+        MCTS.LOGGER.log(Level.INFO, "ID: "+this.ID+", Min: "+bounds[0]+", Max: "+bounds[1]);
         for (SingleTreeNode child : this.children) {
             double hvVal = child.totValue;
             double childValue = hvVal / (child.nVisits + this.epsilon);
-
+            
             childValue = Utils.normalise(childValue, bounds[0], bounds[1]);
             
+            MCTS.LOGGER.log(Level.INFO, "Q: "+childValue);
+            double visitas = Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
+            MCTS.LOGGER.log(Level.INFO, "N: "+visitas);
             double uctValue = childValue
                     + K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
 
@@ -210,14 +217,14 @@ public class SingleTreeNode {
         StateObservation rollerState = state.copy();
         int thisDepth = this.m_depth;
         
-        //MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
+        MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
         //MCTS.weightMatrix.printMatrix();
         ArrayList<Integer> chosenActions = new ArrayList();
         
         // get a new mutated weight matrix 
         weightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
         
-        //MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
+        MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
         //mutated_weightmatrix.printMatrix();
 
         while (!finishRollout(rollerState, thisDepth)) {
@@ -253,11 +260,12 @@ public class SingleTreeNode {
         double delta_final = 0;
         
         if (delta_r != 0) {
-            MCTS.LOGGER.log(Level.WARN, "Using score ΔR: " + delta_r);
             delta_final = delta_r;
+            MCTS.LOGGER.log(Level.INFO, "Using score ΔR: " + delta_final);
         } else {
-            MCTS.LOGGER.log(Level.WARN, String.format("Using score ΔZ+ΔD: %.3f", (0.66 * delta_z + 0.33 * delta_d)));
             delta_final = (0.66 * delta_z) + (0.33 * delta_d);
+            MCTS.LOGGER.log(Level.INFO, String.format("Using score ΔZ+ΔD: %.3f", delta_final));
+
         }
 
         // if the resulting delta gives best fitness, save the mutated matrix
@@ -272,13 +280,14 @@ public class SingleTreeNode {
         /*mutated_weightmatrix.fitness = newScore;//Utils.noise(delta, this.epsilon, this.m_rnd.nextDouble()); 
         MCTS.matrix_collection.add(mutated_weightmatrix.fitness, mutated_weightmatrix);*/
 
-        if (delta_final < bounds[0]) {
+        if (Double.compare(delta_final, bounds[0]) < 0) {
             bounds[0] = delta_final;
         }
 
-        if (delta_final > bounds[1]) {
+        if (Double.compare(delta_final, bounds[1]) > 0) {
             bounds[1] = delta_final;
         }
+        MCTS.LOGGER.log(Level.INFO, "ID: "+this.ID+", Bounds: "+bounds[0]+", "+bounds[1]);
 
         return delta_final;
     }
@@ -319,6 +328,12 @@ public class SingleTreeNode {
         while (n != null) {
             n.nVisits++;
             n.totValue += result;
+            if (result < n.bounds[0]) {
+                n.bounds[0] = result;
+            }
+            if (result > n.bounds[1]) {
+                n.bounds[1] = result;
+            }
             n = n.parent;
         }
     }
@@ -334,7 +349,7 @@ public class SingleTreeNode {
         boolean allEqual = true;
         double first = -1;
         
-        //String log = "";
+        String log = "";
         for (int i = 0; i < children.length; i++) {
 
             if (children[i] != null) {
@@ -350,7 +365,7 @@ public class SingleTreeNode {
                     bestValue = childValue;
                     selected = i;
                 }
-                //log += String.format(printAction(actions[i])+"%.2f, %.2f; ", childValue, children[i].totValue);
+                log += String.format(printAction(actions[i])+"%.2f, %.2f; ", childValue, children[i].totValue);
             }
         }
 
@@ -361,8 +376,8 @@ public class SingleTreeNode {
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
-        //MCTS.LOGGER.log(Level.WARN, log);
-        //MCTS.LOGGER.log(Level.WARN, "Selected: "+printAction(actions[selected]));
+        MCTS.LOGGER.log(Level.INFO, log);
+        MCTS.LOGGER.log(Level.INFO, "Selected: "+printAction(actions[selected]));
         return selected;
     }
 
