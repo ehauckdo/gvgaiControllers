@@ -13,15 +13,15 @@ import org.apache.log4j.Level;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
 import tools.Vector2d;
-import util.Util;
 import java.lang.Math;
-import static util.Util.calculateGridDistance;
+
 
 public class SingleTreeNode {
     
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
-    public final int ROLLOUT_DEPTH = 10;
+    public final int ROLLOUT_DEPTH = 2;
+    public final int EXPAND_TREE_DEPTH = 10;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
     public Random m_rnd;
@@ -41,6 +41,7 @@ public class SingleTreeNode {
     public int iterations = 0;
     public HashMap<Integer, Observation> current_features = new HashMap<>();
     public int ID;
+    public SingleTreeNode root;
     
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
@@ -54,14 +55,20 @@ public class SingleTreeNode {
         this.actions = actions;
         children = new SingleTreeNode[num_actions];
         totValue = 0.0;
+        this.root = this.parent;
         if (parent != null) {
             m_depth = parent.m_depth + 1;
+            while(this.root.parent != null){
+                this.root = this.root.parent;
+            }
         } else {
             m_depth = 0;
         }
         this.current_features = getFeatures(state);
         MCTS.weightMatrix.updateMapping(this.current_features, state);
         this.ID = MCTS.ID++;
+        
+        
     }
 
     public void mctsSearch(ElapsedCpuTimer elapsedTimer) {
@@ -96,7 +103,7 @@ public class SingleTreeNode {
             //MCTS.LOGGER.log(Level.INFO, "LastTimeTaken: "+(lastTimeTaken-elapsedTimer.remainingTimeMillis()));
         }
 
-        MCTS.LOGGER.log(Level.INFO, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions+", Average time: "+String.format("%.2f", avgTimeTaken)+",Cumulative time: "+ String.format("%.2f", acumTimeTaken));
+        MCTS.LOGGER.log(Level.ERROR, "Iterations: " + iterations + ", Evolved: " + MCTS.num_evolutions+", Average time: "+String.format("%.2f", avgTimeTaken)+",Cumulative time: "+ String.format("%.2f", acumTimeTaken));
       
         MCTS.LOGGER.log(Level.INFO, "Average time:" + avgTimeTaken + ",Cumulative time:"+acumTimeTaken);
         //if(remaining < 6){
@@ -111,18 +118,17 @@ public class SingleTreeNode {
     public SingleTreeNode treePolicy() {
 
         SingleTreeNode cur = this;
-
-        while (!cur.state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH) {
+        while (!cur.state.isGameOver() && cur.m_depth < EXPAND_TREE_DEPTH) {
             if (cur.notFullyExpanded()) {
                 return cur.expand();
-
             } else {
                 SingleTreeNode next = cur.uct();
                 //SingleTreeNode next = cur.egreedy();
                 cur = next;
             }
+            
         }
-
+        System.out.println("Finished expanding at node: "+cur.ID);
         return cur;
     }
 
@@ -216,7 +222,7 @@ public class SingleTreeNode {
 
     public double rollOut() {
         StateObservation rollerState = state.copy();
-        int thisDepth = this.m_depth;
+        int thisDepth = 0;
         
         MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
         //MCTS.weightMatrix.printMatrix();
@@ -238,22 +244,24 @@ public class SingleTreeNode {
             mutated_weightmatrix.updateMapping(this.current_features, rollerState);
             
             // use mutated matrix to calculate next action for the rollout
-            int action = calculateAction(mutated_weightmatrix);
+            //int action = calculateAction(mutated_weightmatrix);
+            int action = m_rnd.nextInt(num_actions);
             chosenActions.add(action);
             
-            //int action = m_rnd.nextInt(num_actions);
+            
             rollerState.advance(actions[action]);
             thisDepth++;
         }
         
-        String chosenActionsLog = "";
+        String chosenActionsLog = "Chosen: ";
         for(Integer i: chosenActions){
-            chosenActionsLog += printAction(actions[i]);
+            chosenActionsLog += Util.printAction(actions[i]);
         }
-        //MCTS.LOGGER.log(Level.WARN, chosenActionsLog);
+        MCTS.LOGGER.log(Level.ERROR, chosenActionsLog);
 
         double newScore = value(rollerState);
-        double delta_r = newScore - this.state.getGameScore();
+        double delta_r = newScore - this.root.state.getGameScore();
+        
 
         double delta_z = getKnowledgeChange(rollerState);
         double delta_d = dsChange(rollerState);
@@ -340,8 +348,8 @@ public class SingleTreeNode {
     }
     
     public int getNextAction(){
-        //return bestAction();
-        return mostVisitedAction();
+        return bestAction();
+        //return mostVisitedAction();
     }
 
     public int mostVisitedAction() {
@@ -366,7 +374,7 @@ public class SingleTreeNode {
                     bestValue = childValue;
                     selected = i;
                 }
-                log += String.format(printAction(actions[i])+"%.2f, %.2f; ", childValue, children[i].totValue);
+                log += String.format(Util.printAction(actions[i])+"%.2f, %.2f; ", childValue, children[i].totValue);
             }
         }
 
@@ -378,7 +386,7 @@ public class SingleTreeNode {
             selected = bestAction();
         }
         MCTS.LOGGER.log(Level.INFO, log);
-        MCTS.LOGGER.log(Level.INFO, "Selected: "+printAction(actions[selected]));
+        MCTS.LOGGER.log(Level.INFO, "Selected: "+Util.printAction(actions[selected]));
         return selected;
     }
 
@@ -498,7 +506,7 @@ public class SingleTreeNode {
             HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
             for (Integer feature_id : this.current_features.keySet()) {
                 Observation obs = this.current_features.get(feature_id);
-                double euDist = calculateGridDistance(obs.position, obs.reference, this.state.getBlockSize());
+                double euDist = Util.calculateGridDistance(obs.position, obs.reference, this.state.getBlockSize());
                 //strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
                 strenght[action_id] += currentMap.get(feature_id) * euDist;
 
@@ -518,7 +526,7 @@ public class SingleTreeNode {
         //double[] mystrenght = {215.696, 215.696, 210.19327911886418, 253.05181801364353};
         //softmax(mystrenght, 4);
         
-        return softmax(strenght, num_actions);
+        return Util.softmax(strenght, num_actions);
         
     }
 
@@ -556,7 +564,7 @@ public class SingleTreeNode {
             if (this.current_features.containsKey(e.passiveTypeId) ||
                     this.current_features.containsKey(e.activeTypeId)) {
                 
-                Integer event_id = util.Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
+                Integer event_id = Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
                 Integer occurrences = eventsHashMap.get(event_id);
                 //MCTS.LOGGER.log(Level.INFO, "event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 if (occurrences == null) {
@@ -607,7 +615,7 @@ public class SingleTreeNode {
         MCTS.LOGGER.log(Level.INFO, "\nCalculating DistanceChange");
         for (Integer feature_id : Di_0.keySet()) {
             
-            double Di_0_test = calculateGridDistance(Di_0.get(feature_id).position, Di_0.get(feature_id).reference, blockSize);
+            double Di_0_test = Util.calculateGridDistance(Di_0.get(feature_id).position, Di_0.get(feature_id).reference, blockSize);
             //double Di_f_test = calculateDistance(Di_f.get(feature_id).position, Di_f.get(feature_id).reference, blockSize);
    
             //MCTS.LOGGER.log(Level.INFO, "feature_id: "+feature_id+", "+"Di_0: "+Di_0.get(feature_id).sqDist+", "+"Di_f: "+Di_f.get(feature_id).sqDist);
@@ -621,14 +629,14 @@ public class SingleTreeNode {
                 Observation obs_0 = Di_0.get(feature_id);
                 Observation obs_f = Di_f.get(feature_id);
                 int Di_0_obsID = Di_0.get(feature_id).obsID;
-                double Di_0_euDist = calculateGridDistance(obs_0.position, obs_0.reference, blockSize);
+                double Di_0_euDist = Util.calculateGridDistance(obs_0.position, obs_0.reference, blockSize);
                 MCTS.LOGGER.log(Level.INFO, Di_0_obsID+", "+feature_id+": "+Di_0_euDist);
                 
                 double Di_f_euDist = 0;
                 String Di_f_obsID = "null";
                 if(obs_f != null){
                     Di_f_obsID = String.valueOf(Di_f.get(feature_id).obsID);
-                    Di_f_euDist = calculateGridDistance(obs_f.position, obs_f.reference, blockSize);
+                    Di_f_euDist = Util.calculateGridDistance(obs_f.position, obs_f.reference, blockSize);
                 }
                 MCTS.LOGGER.log(Level.INFO, Di_f_obsID+", "+feature_id+": "+Di_f_euDist);
     
@@ -640,60 +648,14 @@ public class SingleTreeNode {
 
         }
         MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
-        //if(delta_d < 0)
-        //    delta_d = 0;
+        if(delta_d < 0)
+            delta_d = 0;
         return delta_d;
     }
     
 
-    public String printAction(Types.ACTIONS action){
-        String character = "";
-        if(null != action)
-            switch (action) {
-            case ACTION_UP:
-                character = "↑";
-                break;
-            case ACTION_DOWN:
-                character = "↓";
-                break;
-            case ACTION_LEFT:
-                character = "←";
-                break;
-            case ACTION_RIGHT:
-                character = "→";
-                break;
-            case ACTION_USE:
-                character = "USE";
-                break;
-            default:
-                break;
-        }
-        return character;
-    }
     
-    public int softmax(double[] strenght, int size){
-        double sum = 0;
-        for(int i = 0; i < size; i++){
-            sum += Math.pow(Math.E, -strenght[i]);   
-        }
-        RandomCollection rc = new RandomCollection();
-        
-        //MCTS.LOGGER.log(Level.INFO, "Actions through Softmax");
-        for(int i = 0; i < size; i++){
-            double value = Math.pow(Math.E, -strenght[i])/sum;
-            MCTS.LOGGER.log(Level.WARN, i+" "+strenght[i]+" --> "+value);
-            rc.add(value, i);
-        }
-        
-        /*int[] results = {0, 0, 0, 0};
-        for(int i =0; i < 100; i++){
-            results[(int)rc.next()] += 1;
-        }
-        for(int i =0; i < size; i++){
-            System.out.println(i+": "+results[i]);
-        }*/
-        return (int) rc.next();
-        
-    }
+    
+    
       
 }

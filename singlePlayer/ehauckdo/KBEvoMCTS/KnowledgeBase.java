@@ -24,13 +24,13 @@ public class KnowledgeBase {
     }
      
     public void add(int actTypeId, int pasTypeId, double scoreChange){
-        EventRecord er = events.get(getCantorPairingId(actTypeId, pasTypeId));
+        EventRecord er = events.get(Util.getCantorPairingId(actTypeId, pasTypeId));
         if(er != null){
             er.addOccurrence(scoreChange);
         }
         else{
             er = new EventRecord(actTypeId, pasTypeId, scoreChange);
-            events.put(getCantorPairingId(actTypeId, pasTypeId), er);
+            events.put(Util.getCantorPairingId(actTypeId, pasTypeId), er);
         }
     }
     
@@ -39,7 +39,7 @@ public class KnowledgeBase {
     }
     
     public int getOcurrences(int actTypeId, int pasTypeId){
-        int key = getCantorPairingId(actTypeId, pasTypeId);
+        int key = Util.getCantorPairingId(actTypeId, pasTypeId);
         EventRecord event = events.get(key);
         if(event == null)
             return 0;
@@ -86,7 +86,4 @@ public class KnowledgeBase {
         System.out.println("");
     }   
     
-    private int getCantorPairingId(int a, int b){
-        return (a + b) * (a + b + 1) / 2 + a;
-    }
 }
