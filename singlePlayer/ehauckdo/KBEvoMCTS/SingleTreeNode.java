@@ -229,7 +229,7 @@ public class SingleTreeNode {
         ArrayList<Integer> chosenActions = new ArrayList();
         
         // get a new mutated weight matrix 
-        weightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
+        WeightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
         
         MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
         //mutated_weightmatrix.printMatrix();
@@ -495,7 +495,7 @@ public class SingleTreeNode {
         }
     }
 
-    public int calculateAction(weightMatrix weightMatrix) {
+    public int calculateAction(WeightMatrix weightMatrix) {
 
         double[] strenght = new double[num_actions];
         double stronghest = HUGE_NEGATIVE;

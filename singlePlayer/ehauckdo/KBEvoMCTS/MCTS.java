@@ -28,8 +28,8 @@ public class MCTS extends CustomController {
     public static int num_actions;
     public static int num_evolutions;
 
-    public static weightMatrix weightMatrix;
-    public static RandomCollection<weightMatrix> matrix_collection = new RandomCollection<>();
+    public static WeightMatrix weightMatrix;
+    public static RandomCollection<WeightMatrix> matrix_collection = new RandomCollection<>();
 
     public static KnowledgeBase knowledgeBase = new KnowledgeBase();
 
@@ -39,7 +39,7 @@ public class MCTS extends CustomController {
         this.num_actions = num_actions;
         this.actions = actions;
         m_rnd = a_rnd;
-        weightMatrix = new weightMatrix(num_actions);
+        weightMatrix = new WeightMatrix(num_actions);
         LOGGER.setLevel(Level.ERROR);   
     }
 

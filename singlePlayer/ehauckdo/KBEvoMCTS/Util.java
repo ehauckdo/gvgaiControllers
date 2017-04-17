@@ -80,15 +80,15 @@ public class Util {
 
     }
     
-    public static void testSampleMatrix(RandomCollection<weightMatrix> matrix_collection){
+    public static void testSampleMatrix(RandomCollection<WeightMatrix> matrix_collection){
         System.out.println("Sampling from collection of "+matrix_collection.map.size()+" matrices");
         for(Double d: matrix_collection.map.keySet()){
             System.out.println("Score: "+matrix_collection.map.get(d).fitness);
         }
         if(matrix_collection.map.keySet().size() > 5){
-            HashMap<weightMatrix, Integer> myhash = new HashMap<>();
+            HashMap<WeightMatrix, Integer> myhash = new HashMap<>();
             for(int i = 0; i < 1500; i++){
-                weightMatrix wm = matrix_collection.next();
+                WeightMatrix wm = matrix_collection.next();
                 Integer oc = myhash.get(wm);
                 if(oc == null){
                     myhash.put(wm, 1);

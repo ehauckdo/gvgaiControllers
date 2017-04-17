@@ -9,7 +9,7 @@ import org.apache.log4j.Level;
  *
  * @author hauck
  */
-public class weightMatrix {
+public class WeightMatrix {
 
     // current fitness of this matrix
     public double fitness = 0;
@@ -21,14 +21,14 @@ public class weightMatrix {
     // each index in the array is an action_id
     public HashMap<Integer, Double>[] actionHashMap;
 
-    public weightMatrix(int num_actions) {
+    public WeightMatrix(int num_actions) {
         actionHashMap = new HashMap[num_actions];
         for (int i = 0; i < num_actions; i++) {
             actionHashMap[i] = new HashMap<>();
         }
     }
 
-    public weightMatrix(int num_actions, HashMap<Integer, Double> features, HashMap<Integer, Double>[] hashMap) {
+    public WeightMatrix(int num_actions, HashMap<Integer, Double> features, HashMap<Integer, Double>[] hashMap) {
         this.actionHashMap = new HashMap[num_actions];
         for (int i = 0; i < num_actions; i++) {
             actionHashMap[i] = new HashMap<>();
@@ -63,9 +63,9 @@ public class weightMatrix {
         }
     }
 
-    public weightMatrix getMutatedMatrix() {
+    public WeightMatrix getMutatedMatrix() {
 
-        weightMatrix mutatedWeightMatrix = new weightMatrix(actionHashMap.length, mapped_features, actionHashMap);
+        WeightMatrix mutatedWeightMatrix = new WeightMatrix(actionHashMap.length, mapped_features, actionHashMap);
 
         for (HashMap<Integer, Double> actionHashMap1 : mutatedWeightMatrix.actionHashMap) {
             for (Integer feature_id : actionHashMap1.keySet()) {
