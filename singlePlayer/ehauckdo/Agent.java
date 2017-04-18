@@ -1,6 +1,6 @@
 package controllers.singlePlayer.ehauckdo;
 
-import controllers.singlePlayer.ehauckdo.KBEvoMCTS.MCTS;
+import controllers.singlePlayer.ehauckdo.hauckMCTS.MCTS;
 import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import java.util.ArrayList;
