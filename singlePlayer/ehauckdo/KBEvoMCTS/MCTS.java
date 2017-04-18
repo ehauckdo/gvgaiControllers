@@ -40,7 +40,7 @@ public class MCTS extends CustomController {
         this.actions = actions;
         m_rnd = a_rnd;
         weightMatrix = new WeightMatrix(num_actions);
-        LOGGER.setLevel(Level.ERROR);   
+        LOGGER.setLevel(Level.OFF);   
     }
 
     @Override

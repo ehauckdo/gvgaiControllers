@@ -20,7 +20,7 @@ public class SingleTreeNode {
     
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
-    public final int ROLLOUT_DEPTH = 2;
+    public final int ROLLOUT_DEPTH = 5;
     public final int EXPAND_TREE_DEPTH = 10;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
@@ -128,7 +128,7 @@ public class SingleTreeNode {
             }
             
         }
-        System.out.println("Finished expanding at node: "+cur.ID);
+        MCTS.LOGGER.log(Level.INFO, "Finished expanding at node: "+cur.ID);
         return cur;
     }
 
@@ -158,20 +158,22 @@ public class SingleTreeNode {
 
         SingleTreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;  
-        MCTS.LOGGER.log(Level.INFO, "Calculating UCT");
-        MCTS.LOGGER.log(Level.INFO, "ID: "+this.ID+", Min: "+bounds[0]+", Max: "+bounds[1]);
+        MCTS.LOGGER.log(Level.ERROR, "\nCalculating UCT");
+        MCTS.LOGGER.log(Level.ERROR, "ID: "+this.ID+", Min: "+bounds[0]+", Max: "+bounds[1]);
+        int i = 0;
         for (SingleTreeNode child : this.children) {
             double hvVal = child.totValue;
             double childValue = hvVal / (child.nVisits + this.epsilon);
             
             childValue = Utils.normalise(childValue, bounds[0], bounds[1]);
             
-            MCTS.LOGGER.log(Level.INFO, "Q: "+childValue);
-            double visitas = Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
-            MCTS.LOGGER.log(Level.INFO, "N: "+visitas);
+            MCTS.LOGGER.log(Level.ERROR, Util.printAction(actions[i]));
+            i += 1;
+            double n = Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
+            MCTS.LOGGER.log(Level.ERROR, "tot: "+child.totValue+", visits:"+child.nVisits+", Q: "+childValue+ ", N:"+n);
             double uctValue = childValue
                     + K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
-
+            MCTS.LOGGER.log(Level.ERROR, "uct: "+uctValue);
             // small sampleRandom numbers: break ties in unexpanded nodes
             uctValue = Utils.noise(uctValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
 
@@ -185,6 +187,8 @@ public class SingleTreeNode {
         if (selected == null) {
             throw new RuntimeException("Warning! returning null: " + bestValue + " : " + this.children.length);
         }
+        MCTS.LOGGER.log(Level.ERROR, "best value: "+bestValue);
+        
 
         return selected;
     }
@@ -244,8 +248,8 @@ public class SingleTreeNode {
             mutated_weightmatrix.updateMapping(this.current_features, rollerState);
             
             // use mutated matrix to calculate next action for the rollout
-            //int action = calculateAction(mutated_weightmatrix);
-            int action = m_rnd.nextInt(num_actions);
+            int action = calculateAction(mutated_weightmatrix);
+            //int action = m_rnd.nextInt(num_actions);
             chosenActions.add(action);
             
             
@@ -279,7 +283,7 @@ public class SingleTreeNode {
 
         // if the resulting delta gives best fitness, save the mutated matrix
         // KB FastEVo approach
-        if (delta_final > MCTS.weightMatrix.fitness) {
+        if (delta_final >= MCTS.weightMatrix.fitness) {
             mutated_weightmatrix.fitness = delta_final;
             MCTS.weightMatrix = mutated_weightmatrix;
             MCTS.num_evolutions += 1;
@@ -348,8 +352,8 @@ public class SingleTreeNode {
     }
     
     public int getNextAction(){
-        return bestAction();
-        //return mostVisitedAction();
+        //return bestAction();
+        return mostVisitedAction();
     }
 
     public int mostVisitedAction() {
@@ -385,8 +389,8 @@ public class SingleTreeNode {
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
-        MCTS.LOGGER.log(Level.INFO, log);
-        MCTS.LOGGER.log(Level.INFO, "Selected: "+Util.printAction(actions[selected]));
+        MCTS.LOGGER.log(Level.ERROR, log);
+        MCTS.LOGGER.log(Level.ERROR, "Selected: "+Util.printAction(actions[selected]));
         return selected;
     }
 
@@ -608,7 +612,7 @@ public class SingleTreeNode {
 
     private double dsChange(StateObservation stateObs) {
         double delta_d = 0;
-        HashMap<Integer, Observation> Di_0 = getFeatures(this.state);
+        HashMap<Integer, Observation> Di_0 = getFeatures(this.parent.state);
         HashMap<Integer, Observation> Di_f = getUpdatedFeatures(stateObs, Di_0);
         double blockSize = stateObs.getBlockSize();
     
@@ -648,8 +652,8 @@ public class SingleTreeNode {
 
         }
         MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
-        if(delta_d < 0)
-            delta_d = 0;
+        //if(delta_d < 0)
+        //    delta_d = 0;
         return delta_d;
     }
     
