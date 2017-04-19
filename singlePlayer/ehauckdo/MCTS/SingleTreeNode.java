@@ -264,7 +264,7 @@ public class SingleTreeNode {
         MCTS.LOGGER.log(Level.ERROR, chosenActionsLog);
 
         double newScore = value(rollerState);
-        double delta_r = newScore - this.root.state.getGameScore();
+        double delta_r = newScore - this.parent.state.getGameScore();
         
 
         double delta_z = getKnowledgeChange(rollerState);

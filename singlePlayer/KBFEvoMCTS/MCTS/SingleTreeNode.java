@@ -264,7 +264,7 @@ public class SingleTreeNode {
         MCTS.LOGGER.log(Level.ERROR, chosenActionsLog);
 
         double newScore = value(rollerState);
-        double delta_r = newScore - this.root.state.getGameScore();
+        double delta_r = newScore - this.state.getGameScore();
         
 
         double delta_z = getKnowledgeChange(rollerState);
@@ -612,7 +612,7 @@ public class SingleTreeNode {
 
     private double dsChange(StateObservation stateObs) {
         double delta_d = 0;
-        HashMap<Integer, Observation> Di_0 = getFeatures(this.parent.state);
+        HashMap<Integer, Observation> Di_0 = getFeatures(this.state);
         HashMap<Integer, Observation> Di_f = getUpdatedFeatures(stateObs, Di_0);
         double blockSize = stateObs.getBlockSize();
     
