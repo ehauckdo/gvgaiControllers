@@ -20,7 +20,7 @@ public class SingleTreeNode {
     
     private final double HUGE_NEGATIVE = -10000000.0;
     private final double HUGE_POSITIVE = 10000000.0;
-    public final int ROLLOUT_DEPTH = 5;
+    public final int ROLLOUT_DEPTH = 10;
     public final int EXPAND_TREE_DEPTH = 10;
     public double epsilon = 1e-6;
     public double egreedyEpsilon = 0.05;
