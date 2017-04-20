@@ -553,7 +553,7 @@ public class SingleTreeNode {
         newState.getFromAvatarSpritesPositions();
 
         HashMap<Integer, Integer> eventsHashMap = new HashMap();
-        double scoreChange = this.state.getGameScore() - newState.getGameScore();
+        double scoreChange = this.parent.state.getGameScore() - newState.getGameScore();
 
         int new_events = newState.getEventsHistory().size() - oldState.getEventsHistory().size();
         
