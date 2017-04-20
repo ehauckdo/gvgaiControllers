@@ -537,12 +537,12 @@ public class SingleTreeNode {
     private double getKnowledgeChange(StateObservation newState) {
         
         // there is no new events after simulation
-        if (this.state.getEventsHistory().size() == newState.getEventsHistory().size()) {
+        if (this.parent.state.getEventsHistory().size() == newState.getEventsHistory().size()) {
             return 0;
         }
 
         // map new events into a hashmap
-        HashMap<Integer, Integer> eventsHashMap = mapNewEvents(this.state, newState);
+        HashMap<Integer, Integer> eventsHashMap = mapNewEvents(this.parent.state, newState);
 
         return calculateKnowledgeChange(eventsHashMap);
 
