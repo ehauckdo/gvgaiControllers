@@ -158,8 +158,8 @@ public class SingleTreeNode {
 
         SingleTreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;  
-        MCTS.LOGGER.log(Level.ERROR, "\nCalculating UCT");
-        MCTS.LOGGER.log(Level.ERROR, "ID: "+this.ID+", Min: "+bounds[0]+", Max: "+bounds[1]);
+        MCTS.LOGGER.log(Level.WARN, "\nCalculating UCT");
+        MCTS.LOGGER.log(Level.WARN, "ID: "+this.ID+", Min: "+bounds[0]+", Max: "+bounds[1]);
         int i = 0;
         for (SingleTreeNode child : this.children) {
             double hvVal = child.totValue;
@@ -167,13 +167,13 @@ public class SingleTreeNode {
             
             childValue = Utils.normalise(childValue, bounds[0], bounds[1]);
             
-            MCTS.LOGGER.log(Level.ERROR, Util.printAction(actions[i]));
+            MCTS.LOGGER.log(Level.WARN, Util.printAction(actions[i]));
             i += 1;
             double n = Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
-            MCTS.LOGGER.log(Level.ERROR, "tot: "+child.totValue+", visits:"+child.nVisits+", Q: "+childValue+ ", N:"+n);
+            MCTS.LOGGER.log(Level.WARN, "tot: "+child.totValue+", visits:"+child.nVisits+", Q: "+childValue+ ", N:"+n);
             double uctValue = childValue
                     + K * Math.sqrt(Math.log(this.nVisits + 1) / (child.nVisits + this.epsilon));
-            MCTS.LOGGER.log(Level.ERROR, "uct: "+uctValue);
+            MCTS.LOGGER.log(Level.WARN, "uct: "+uctValue);
             // small sampleRandom numbers: break ties in unexpanded nodes
             uctValue = Utils.noise(uctValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
 
@@ -187,7 +187,7 @@ public class SingleTreeNode {
         if (selected == null) {
             throw new RuntimeException("Warning! returning null: " + bestValue + " : " + this.children.length);
         }
-        MCTS.LOGGER.log(Level.ERROR, "best value: "+bestValue);
+        MCTS.LOGGER.log(Level.WARN, "best value: "+bestValue);
         
 
         return selected;
@@ -261,7 +261,7 @@ public class SingleTreeNode {
         for(Integer i: chosenActions){
             chosenActionsLog += Util.printAction(actions[i]);
         }
-        MCTS.LOGGER.log(Level.ERROR, chosenActionsLog);
+        MCTS.LOGGER.log(Level.WARN, chosenActionsLog);
 
         double newScore = value(rollerState);
         double delta_r = newScore - this.state.getGameScore();
@@ -389,8 +389,8 @@ public class SingleTreeNode {
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
-        MCTS.LOGGER.log(Level.ERROR, log);
-        MCTS.LOGGER.log(Level.ERROR, "Selected: "+Util.printAction(actions[selected]));
+        MCTS.LOGGER.log(Level.WARN, log);
+        MCTS.LOGGER.log(Level.WARN, "Selected: "+Util.printAction(actions[selected]));
         return selected;
     }
 
@@ -541,22 +541,26 @@ public class SingleTreeNode {
             return 0;
         }
 
-        // map new events into a hashmap
-        HashMap<Integer, Integer> eventsHashMap = mapNewEvents(this.state, newState);
+        // get new events from simulation
+        ArrayList<Event> newEvents = mapNewEvents(this.state, newState);
 
-        return calculateKnowledgeChange(eventsHashMap);
-
+        double delta_z = calculateKnowledgeChange(newEvents);
+        
+        // update knowledge base with new events
+        double scoreChange = this.state.getGameScore() - newState.getGameScore();
+        for(Event e: newEvents){
+            //MCTS.LOGGER.log(Level.INFO, "event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+            MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
+        }
+        
+        return delta_z;
     }
 
-    private HashMap<Integer, Integer> mapNewEvents(StateObservation oldState, StateObservation newState) {
+    private ArrayList<Event> mapNewEvents(StateObservation oldState, StateObservation newState) {
         
-        HashMap<Integer, Integer> eventsHashMap = new HashMap();
-        double scoreChange = oldState.getGameScore() - newState.getGameScore();
-
+        ArrayList<Event> eventsList = new ArrayList();
         int new_events = newState.getEventsHistory().size() - oldState.getEventsHistory().size();
         
-        //MCTS.LOGGER.log(Level.INFO, "\nKB checking... "+new_events+" new events! ");
-
         Iterator<Event> events = newState.getEventsHistory().descendingIterator();
         for (int i = 0; i < new_events; i++) {
             Event e = events.next();
@@ -564,45 +568,42 @@ public class SingleTreeNode {
             // check if the sprite collided with is one of those that we keep
             // track of for calculating ΔZ and ΔD
             if (this.current_features.containsKey(e.passiveTypeId) ||
-                    this.current_features.containsKey(e.activeTypeId)) {
-                
-                Integer event_id = Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
-                Integer occurrences = eventsHashMap.get(event_id);
-                //MCTS.LOGGER.log(Level.INFO, "event added, EventID: " + event_id + "Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
-                if (occurrences == null) {
-                    eventsHashMap.put(event_id, 1);
-                } else {
-                    eventsHashMap.put(event_id, occurrences + 1);
-                }
-
-                // Add events to KB
-                MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
-                //int Zi0 = MCTS.knowledgeBase.getOcurrences(e.activeTypeId, e.passiveTypeId);
-                //MCTS.LOGGER.log(Level.INFO, "Zi0: " + Zi0);
+                    this.current_features.containsKey(e.activeTypeId)) {      
+                eventsList.add(e);
             }
         }
-        return eventsHashMap;
+        return eventsList;
     }
 
-    private double calculateKnowledgeChange(HashMap<Integer, Integer> eventsHashMap) {
+    private double calculateKnowledgeChange(ArrayList<Event> newEvents) {
+
+        HashMap<Integer, Integer> newEventsHashMap = new HashMap();
+        // Map new events
+        for(Event e: newEvents){
+            Integer event_id = Util.getCantorPairingId(e.activeTypeId, e.passiveTypeId);
+            Integer occurrences = newEventsHashMap.get(event_id);
+            if (occurrences == null) {
+                newEventsHashMap.put(event_id, 1);
+            } else {
+                newEventsHashMap.put(event_id, occurrences + 1);
+            }
+        }
+        
         double knowledgeChange = 0;
 
-        //Compare with previous events
-        //MCTS.LOGGER.log(Level.INFO, "Calculating KnoweldgeChange");
-        for (Integer id : eventsHashMap.keySet()) {
-            //MCTS.LOGGER.log(Level.INFO, "Feature: "+id);
+        //Compare with previous events from KB
+        MCTS.LOGGER.log(Level.INFO, "Calculating KnoweldgeChange");
+        for (Integer id : newEventsHashMap.keySet()) {
+            MCTS.LOGGER.log(Level.INFO, "Feature: "+id);
             int Zi0 = MCTS.knowledgeBase.getOcurrences(id);
-            int Zif = Zi0 + eventsHashMap.get(id);
+            int Zif = Zi0 + newEventsHashMap.get(id);
             if (Zi0 == 0) {
-                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += Zif = " + Zif);
-                // Ki = Zif
+                MCTS.LOGGER.log(Level.INFO, "knowledgeChange += Zif -> " + Zif);
                 knowledgeChange += Zif;
             } else {
-                //MCTS.LOGGER.log(Level.INFO, "knowledgeChange += (Zif / (double) Zi0) - 1 = (" +Zif+" / "+Zi0+")-1");
-                //Ki = Zif/Zi0 - 1
+                MCTS.LOGGER.log(Level.INFO, "knowledgeChange += (Zif/(double) Zi0)-1 -> (" +Zif+" / "+Zi0+")-1");
                 knowledgeChange += (Zif  / (double) Zi0) - 1;
             }
-
         }
         //MCTS.LOGGER.log(Level.WARN, "KnowledgeChange: "+knowledgeChange);
         return knowledgeChange;
