@@ -33,7 +33,7 @@ public class EventRecord {
 
     public void addOccurrence(double scoreChange) {
         this.scoreChanges.add(scoreChange);
-        this.averageScoreChange = scoreChange;
+        this.averageScoreChange = 0;
         for (Double d : this.scoreChanges) {
             this.averageScoreChange += d;
         }
