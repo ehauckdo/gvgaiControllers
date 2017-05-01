@@ -41,7 +41,6 @@ public class SingleTreeNode {
     public int iterations = 0;
     public HashMap<Integer, Observation> current_features = new HashMap<>();
     public int ID;
-    public SingleTreeNode root;
     
     public SingleTreeNode(StateObservation stateObs, Random rnd, int num_actions, Types.ACTIONS[] actions) {
         this(stateObs, null, rnd, num_actions, actions);
@@ -55,12 +54,8 @@ public class SingleTreeNode {
         this.actions = actions;
         children = new SingleTreeNode[num_actions];
         totValue = 0.0;
-        this.root = this.parent;
         if (parent != null) {
             m_depth = parent.m_depth + 1;
-            while(this.root.parent != null){
-                this.root = this.root.parent;
-            }
         } else {
             m_depth = 0;
         }
