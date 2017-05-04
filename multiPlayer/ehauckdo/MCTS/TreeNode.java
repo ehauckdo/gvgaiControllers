@@ -33,6 +33,7 @@ public class TreeNode
     int[] NUM_ACTIONS;
     public Types.ACTIONS[][] actions;
     public int ROLLOUT_DEPTH = 10;
+    public final int EXPAND_TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public int id, oppID, no_players;
     
@@ -110,7 +111,7 @@ public class TreeNode
 
         TreeNode cur = this;
 
-        while (!cur.state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
+        while (!cur.state.isGameOver() && cur.m_depth < EXPAND_TREE_DEPTH)
         {
             if (cur.notFullyExpanded()) {
                 return cur.expand();
