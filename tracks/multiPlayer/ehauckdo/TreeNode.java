@@ -25,6 +25,7 @@ public class TreeNode
 
     public int MCTS_ITERATIONS = 100;
     public int ROLLOUT_DEPTH = 10;
+    public int TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
     public int[] NUM_ACTIONS;
@@ -228,7 +229,7 @@ public class TreeNode
 
     public boolean finishRollout(StateObservationMulti rollerState, int depth)
     {
-        if(depth >= ROLLOUT_DEPTH)      //rollout end condition.
+        if(depth >= TREE_DEPTH)      //rollout end condition.
             return true;
 
         if(rollerState.isGameOver())               //end of game
