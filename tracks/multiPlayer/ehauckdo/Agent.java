@@ -1,6 +1,5 @@
 package tracks.multiPlayer.ehauckdo;
 
-import tracks.multiPlayer.advanced.sampleMCTS.*;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -22,7 +21,7 @@ public class Agent extends AbstractMultiPlayer {
     public Types.ACTIONS[][] actions;
     public int id, oppID, no_players;
 
-    protected SingleMCTSPlayer mctsPlayer;
+    protected MCTSPlayer mctsPlayer;
 
     /**
      * Public constructor with state observation and time due.
@@ -57,8 +56,8 @@ public class Agent extends AbstractMultiPlayer {
         mctsPlayer = getPlayer(so, elapsedTimer, NUM_ACTIONS, actions, id, oppID, no_players);
     }
 
-    public SingleMCTSPlayer getPlayer(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
-        return new SingleMCTSPlayer(new Random(), NUM_ACTIONS, actions, id, oppID, no_players);
+    public MCTSPlayer getPlayer(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
+        return new MCTSPlayer(new Random(), NUM_ACTIONS, actions, id, oppID, no_players);
     }
 
 
