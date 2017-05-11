@@ -34,11 +34,11 @@ public class TreeNode
 
     public StateObservationMulti rootState;
 
-    public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
-        this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
+    public TreeNode(Random rnd, StateObservationMulti stateObs, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
+        this(null, stateObs, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
     }
 
-    public TreeNode(TreeNode parent, int childIdx, Random rnd, int id, int oppID, int no_players, int[] NUM_ACTIONS, Types.ACTIONS[][] actions) {
+    public TreeNode(TreeNode parent, StateObservationMulti stateObs, int childIdx, Random rnd, int id, int oppID, int no_players, int[] NUM_ACTIONS, Types.ACTIONS[][] actions) {
         this.id = id;
         this.oppID = oppID;
         this.no_players = no_players;
@@ -53,6 +53,7 @@ public class TreeNode
         this.NUM_ACTIONS = NUM_ACTIONS;
         children = new TreeNode[NUM_ACTIONS[id]];
         this.actions = actions;
+        this.rootState = stateObs;
     }
 
 
@@ -65,13 +66,9 @@ public class TreeNode
 
         int remainingLimit = 5;
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
-        //while(numIters < Agent.MCTS_ITERATIONS){
-
-            StateObservationMulti state = rootState.copy();
-
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
-            TreeNode selected = treePolicy(state);
-            double delta = selected.rollOut(state);
+            TreeNode selected = treePolicy();
+            double delta = selected.rollOut();
             backUp(selected, delta);
 
             numIters++;
@@ -84,17 +81,18 @@ public class TreeNode
         System.out.println("-- " + numIters + " -- ( " + avgTimeTaken + ")");
     }
 
-    public TreeNode treePolicy(StateObservationMulti state) {
+    public TreeNode treePolicy() {
 
         TreeNode cur = this;
+        
 
-        while (!state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
+        while (!cur.rootState.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
         {
             if (cur.notFullyExpanded()) {
-                return cur.expand(state);
+                return cur.expand();
 
             } else {
-                TreeNode next = cur.uct(state);
+                TreeNode next = cur.uct();
                 cur = next;
             }
         }
@@ -103,7 +101,7 @@ public class TreeNode
     }
 
 
-    public TreeNode expand(StateObservationMulti state) {
+    public TreeNode expand() {
 
         int bestAction = 0;
         double bestValue = -1;
@@ -128,14 +126,15 @@ public class TreeNode
         Types.ACTIONS[] oppActions = actions[oppID];
         acts[oppID] = oppActions[new Random().nextInt(oppActions.length)];
 
-        state.advance(acts);
+        StateObservationMulti nextState = rootState.copy();
+        nextState.advance(acts);
 
-        TreeNode tn = new TreeNode(this,bestAction,this.m_rnd, id, oppID, no_players, NUM_ACTIONS, actions);
+        TreeNode tn = new TreeNode(this,nextState,bestAction,this.m_rnd, id, oppID, no_players, NUM_ACTIONS, actions);
         children[bestAction] = tn;
         return tn;
     }
 
-    public TreeNode uct(StateObservationMulti state) {
+    public TreeNode uct() {
 
         TreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;
@@ -164,41 +163,28 @@ public class TreeNode
             + bounds[0] + " " + bounds[1]);
         }
 
-        //Roll the state:
-
-        //need to provide actions for all players to advance the forward model
-        Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
-
-        //set this agent's action
-        acts[id] = actions[id][selected.childIdx];
-
-        //get actions available to the opponent and assume they will do a random action
-        Types.ACTIONS[] oppActions = actions[oppID];
-        acts[oppID] = oppActions[new Random().nextInt(oppActions.length)];
-
-        state.advance(acts);
-
         return selected;
     }
 
 
-    public double rollOut(StateObservationMulti state)
+    public double rollOut()
     {
-        int thisDepth = this.m_depth;
+        StateObservationMulti rollerState = rootState.copy();
+        int thisDepth = 0;
 
-        while (!finishRollout(state,thisDepth)) {
+        while (!finishRollout(rollerState,thisDepth)) {
 
             //random move for all players
             Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
             for (int i = 0; i < no_players; i++) {
                 acts[i] = actions[i][m_rnd.nextInt(NUM_ACTIONS[i])];
             }
-            state.advance(acts);
+            rollerState.advance(acts);
             thisDepth++;
         }
 
 
-        double delta = value(state);
+        double delta = value(rollerState);
 
         if(delta < bounds[0])
             bounds[0] = delta;
@@ -261,25 +247,33 @@ public class TreeNode
         double bestValue = -Double.MAX_VALUE;
         boolean allEqual = true;
         double first = -1;
-
+//        System.out.println("Children lenght: "+children.length);
         for (int i=0; i<children.length; i++) {
-
+//            System.out.print(Util.printAction(actions[0][i])+": ");
             if(children[i] != null)
             {
-                if(first == -1)
-                    first = children[i].nVisits;
-                else if(first != children[i].nVisits)
-                {
-                    allEqual = false;
-                }
+                if(!isPlayerLoses(children[i].rootState)){
+//                    System.out.print("(Tick "+children[i].rootState.getGameTick()+") OK\n");
+                    if(first == -1){
+                        first = children[i].nVisits;
+                        selected = i;
+                    }else if(first != children[i].nVisits)
+                    {
+                        allEqual = false;
+                    }
 
-                double childValue = children[i].nVisits;
-                childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
-                if (childValue > bestValue) {
-                    bestValue = childValue;
-                    selected = i;
+                    double childValue = children[i].nVisits;
+                    childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
+                    if (childValue > bestValue ) {
+                        bestValue = childValue;
+                        selected = i;
+                    }
                 }
+//                else{
+//                    System.out.print("GameOver\n");
+//                }
             }
+           
         }
 
         if (selected == -1)
@@ -291,6 +285,7 @@ public class TreeNode
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
+        System.out.println("Selected: "+selected);
         return selected;
     }
 
@@ -301,7 +296,7 @@ public class TreeNode
 
         for (int i=0; i<children.length; i++) {
 
-            if(children[i] != null) {
+            if(children[i] != null && !isPlayerLoses(children[i].rootState)) {
                 //double tieBreaker = m_rnd.nextDouble() * epsilon;
                 double childValue = children[i].totValue / (children[i].nVisits + this.epsilon);
                 childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
@@ -330,5 +325,17 @@ public class TreeNode
         }
 
         return false;
+    }
+    
+    /*
+    * Return true if the passed state is Game Over AND the current player lost
+    * the game (either individually or in co-op)
+    */
+    public boolean isPlayerLoses(StateObservationMulti so){
+        if(so.isGameOver()){
+            return so.getMultiGameWinner()[id] != Types.WINNER.PLAYER_WINS;
+        }
+        else
+            return false;
     }
 }

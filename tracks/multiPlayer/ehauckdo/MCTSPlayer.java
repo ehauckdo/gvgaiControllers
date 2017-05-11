@@ -16,7 +16,6 @@ import tools.ElapsedCpuTimer;
 public class MCTSPlayer
 {
 
-
     /**
      * Root of the tree.
      */
@@ -50,8 +49,7 @@ public class MCTSPlayer
     {
         //Set the game observation to a newly root node.
         //System.out.println("learning_style = " + learning_style);
-        m_root = new TreeNode(m_rnd, NUM_ACTIONS, actions, id, oppID, no_players);
-        m_root.rootState = a_gameState;
+        m_root = new TreeNode(m_rnd, a_gameState, NUM_ACTIONS, actions, id, oppID, no_players);
     }
 
     /**

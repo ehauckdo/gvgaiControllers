@@ -54,6 +54,8 @@ public class Agent extends AbstractMultiPlayer {
         //Create the player.
 
         mctsPlayer = getPlayer(so, elapsedTimer, NUM_ACTIONS, actions, id, oppID, no_players);
+        
+        //System.out.println(so.get);
     }
 
     public MCTSPlayer getPlayer(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
