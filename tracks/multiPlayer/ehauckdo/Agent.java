@@ -1,25 +1,36 @@
 package tracks.multiPlayer.ehauckdo;
 
-import tracks.multiPlayer.ehauckdo.MCTS.MCTS;
-import core.game.Observation;
+import tracks.multiPlayer.advanced.sampleMCTS.*;
+import java.util.ArrayList;
+import java.util.Random;
+
 import core.game.StateObservationMulti;
 import core.player.AbstractMultiPlayer;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 
-import java.util.ArrayList;
-import java.util.Random;
-
+/**
+ * Created with IntelliJ IDEA.
+ * User: ssamot
+ * Date: 14/11/13
+ * Time: 21:45
+ * This is an implementation of MCTS UCT
+ */
 public class Agent extends AbstractMultiPlayer {
 
     public int[] NUM_ACTIONS;
     public Types.ACTIONS[][] actions;
-
     public int id, oppID, no_players;
 
-    private MCTS mctsPlayer;
+    protected SingleMCTSPlayer mctsPlayer;
 
-    public Agent(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int playerID){
+    /**
+     * Public constructor with state observation and time due.
+     * @param so state observation of the current game.
+     * @param elapsedTimer Timer for the controller creation.
+     */
+    public Agent(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int playerID)
+    {
         //get game information
 
         no_players = so.getNoPlayers();
@@ -42,13 +53,23 @@ public class Agent extends AbstractMultiPlayer {
         }
 
         //Create the player.
-        mctsPlayer = new MCTS(new Random(), NUM_ACTIONS, actions, id, oppID, no_players);
+
+        mctsPlayer = getPlayer(so, elapsedTimer, NUM_ACTIONS, actions, id, oppID, no_players);
     }
 
-    public Types.ACTIONS act(StateObservationMulti stateObs, ElapsedCpuTimer elapsedTimer) {
+    public SingleMCTSPlayer getPlayer(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
+        return new SingleMCTSPlayer(new Random(), NUM_ACTIONS, actions, id, oppID, no_players);
+    }
 
-        ArrayList<Observation> obs[] = stateObs.getFromAvatarSpritesPositions();
-        ArrayList<Observation> grid[][] = stateObs.getObservationGrid();
+
+    /**
+     * Picks an action. This function is called every game step to request an
+     * action from the player.
+     * @param stateObs Observation of the current state.
+     * @param elapsedTimer Timer when the action returned is due.
+     * @return An action for the current state
+     */
+    public Types.ACTIONS act(StateObservationMulti stateObs, ElapsedCpuTimer elapsedTimer) {
 
         //Set the state observation object as the new root of the tree.
         mctsPlayer.init(stateObs);
