@@ -1,4 +1,4 @@
-package controllers.tracks.singlePlayer.ehauckdo;
+package tracks.singlePlayer.ehauckdo;
 
 import core.game.Observation;
 import core.game.StateObservation;

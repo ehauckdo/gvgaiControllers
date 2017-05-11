@@ -1,4 +1,4 @@
-package controllers.tracks.singlePlayer.KBFEvoMCTS;
+package tracks.singlePlayer.KBFEvoMCTS;
 
 import core.game.Observation;
 import core.game.StateObservation;

@@ -1,4 +1,4 @@
-package controllers.tracks.multiPlayer.ehauckdo.MCTS;
+package tracks.multiPlayer.ehauckdo.MCTS;
 
 import core.game.Event;
 import java.util.HashMap;

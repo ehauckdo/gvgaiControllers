@@ -1,6 +1,6 @@
-package controllers.tracks.singlePlayer.ehauckdo.MCTS;
+package tracks.singlePlayer.ehauckdo.MCTS;
 
-import controllers.tracks.singlePlayer.ehauckdo.CustomController;
+import tracks.singlePlayer.ehauckdo.CustomController;
 import core.game.Event;
 import core.game.StateObservation;
 import java.util.ArrayList;

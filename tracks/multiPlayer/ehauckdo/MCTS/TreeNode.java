@@ -1,4 +1,4 @@
-package controllers.tracks.multiPlayer.ehauckdo.MCTS;
+package tracks.multiPlayer.ehauckdo.MCTS;
 
 import core.game.Event;
 import core.game.Observation;
@@ -203,14 +203,14 @@ public class TreeNode
         StateObservationMulti rollerState = state.copy();
         int thisDepth = this.m_depth;
         
-        MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
+        //MCTS.LOGGER.log(Level.INFO, "OLD matrix:");
         //MCTS.weightMatrix.printMatrix();
-        ArrayList<Integer> chosenActions = new ArrayList();
+        ArrayList<Types.ACTIONS> chosenActions = new ArrayList();
         
         // get a new mutated weight matrix 
-        WeightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
+        //WeightMatrix mutated_weightmatrix = MCTS.weightMatrix.getMutatedMatrix();
         
-        MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
+       // MCTS.LOGGER.log(Level.INFO, "NEW mutated matrix:");
         //mutated_weightmatrix.printMatrix();
 
         while (!finishRollout(rollerState,thisDepth)) {
@@ -220,7 +220,7 @@ public class TreeNode
             
             // insert new weights in the matrix for any new features  
             // which showed up on this new state
-            mutated_weightmatrix.updateMapping(this.current_features, rollerState);
+            //mutated_weightmatrix.updateMapping(this.current_features, rollerState);
 
             //random move for all players
             Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
@@ -229,25 +229,21 @@ public class TreeNode
             }
             
              // use mutated matrix to calculate next action for the rollout
-            int action = calculateAction(mutated_weightmatrix);
-            //int action = m_rnd.nextInt(num_actions);
-            chosenActions.add(action);
-            
-            acts[0] = actions[0][action];
+            //int action = calculateAction(mutated_weightmatrix);
+            chosenActions.add(acts[0]);
 
             rollerState.advance(acts);
             thisDepth++;
         }
         
-        String chosenActionsLog = "Chosen: ";
-        for(Integer i: chosenActions){
-            chosenActionsLog += Util.printAction(actions[0][i]);
+        String chosenActionsLog = "Actions for this Simulation: ";
+        for(Types.ACTIONS action: chosenActions){
+            chosenActionsLog += Util.printAction(action);
         }
         MCTS.LOGGER.log(Level.ERROR, chosenActionsLog);
 
         double newScore = value(rollerState);
         double delta_r = newScore - this.parent.state.getGameScore();
-        
 
         double delta_z = getKnowledgeChange(rollerState);
         double delta_d = dsChange(rollerState);
@@ -256,20 +252,20 @@ public class TreeNode
         
         if (delta_r != 0) {
             delta_final = delta_r;
-            MCTS.LOGGER.log(Level.INFO, "Using score ΔR: " + delta_final);
+            MCTS.LOGGER.log(Level.ERROR, "Using score ΔR: " + delta_final);
         } else {
             delta_final = (0.66 * delta_z) + (0.33 * delta_d);
-            MCTS.LOGGER.log(Level.INFO, String.format("Using score ΔZ+ΔD: %.3f", delta_final));
+            MCTS.LOGGER.log(Level.ERROR, String.format("Using score ΔZ+ΔD: %.3f", delta_final));
 
         }
         
         // if the resulting delta gives best fitness, save the mutated matrix
         // KB FastEVo approach
-        if (delta_final >= MCTS.weightMatrix.fitness) {
-            mutated_weightmatrix.fitness = delta_final;
-            MCTS.weightMatrix = mutated_weightmatrix;
-            MCTS.num_evolutions += 1;
-        }
+        //if (delta_final >= MCTS.weightMatrix.fitness) {
+        //    mutated_weightmatrix.fitness = delta_final;
+        //    MCTS.weightMatrix = mutated_weightmatrix;
+        //    MCTS.num_evolutions += 1;
+        //}
 
         if (Double.compare(delta_final, bounds[0]) < 0) {
             bounds[0] = delta_final;
@@ -338,7 +334,7 @@ public class TreeNode
         boolean allEqual = true;
         double first = -1;
 
-        String log = "";
+        //String log = "";
         for (int i=0; i<children.length; i++) {
 
             if(children[i] != null)
@@ -356,7 +352,7 @@ public class TreeNode
                     bestValue = childValue;
                     selected = i;
                 }
-                log += String.format(Util.printAction(actions[0][i])+"%.2f, %.2f; ", childValue, children[i].totValue);
+                //log += String.format(Util.printAction(actions[0][i])+"%.2f, %.2f; ", childValue, children[i].totValue);
             }
         }
 
@@ -369,8 +365,8 @@ public class TreeNode
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
-        MCTS.LOGGER.log(Level.ERROR, log);
-        MCTS.LOGGER.log(Level.ERROR, "Selected: "+Util.printAction(actions[0][selected]));
+        //MCTS.LOGGER.log(Level.ERROR, log);
+        //MCTS.LOGGER.log(Level.ERROR, "Selected: "+Util.printAction(actions[0][selected]));
         return selected;
     }
 
@@ -443,46 +439,46 @@ public class TreeNode
                 if (!list.isEmpty() && list.get(0).sqDist > 0) {
                    Observation obs = list.get(0);
                     features.put(obs.itype, obs);
-                    MCTS.LOGGER.log(Level.INFO, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
+                    MCTS.LOGGER.log(Level.ERROR, "Category:"+obs.category+", ID: "+obs.obsID+", iType:"+obs.itype+", Qtd: "+list.size()+", Dist: "+obs.sqDist);
                 }
             }
         }
     }
     
-    public int calculateAction(WeightMatrix weightMatrix) {
-
-        double[] strenght = new double[NUM_ACTIONS[0]];
-        double stronghest = HUGE_NEGATIVE;
-        double weakest = HUGE_POSITIVE;
-
-        for (int action_id = 0; action_id < NUM_ACTIONS[0]; action_id++) {
-            strenght[action_id] = 0;
-            HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
-            for (Integer feature_id : this.current_features.keySet()) {
-                Observation obs = this.current_features.get(feature_id);
-                double euDist = Util.calculateGridDistance(obs.position, obs.reference, this.state.getBlockSize());
-                //strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
-                strenght[action_id] += currentMap.get(feature_id) * euDist;
-
-            }
-            /*if(strenght[action_id] > stronghest)
-                stronghest = strenght[action_id];
-            if(strenght[action_id] < weakest)
-                weakest = strenght[action_id];*/
-        }
-        
-        MCTS.LOGGER.log(Level.WARN, "\nCalculating Actions... ");
-        for (int action_id = 0; action_id < NUM_ACTIONS[0]; action_id++) {
-            strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
-            MCTS.LOGGER.log(Level.WARN, "Strenght action "+action_id+": "+strenght[action_id]);
-        }  
-           
-        //double[] mystrenght = {215.696, 215.696, 210.19327911886418, 253.05181801364353};
-        //softmax(mystrenght, 4);
-        
-        return Util.softmax(strenght, NUM_ACTIONS[0]);
-        
-    }
+//    public int calculateAction(WeightMatrix weightMatrix) {
+//
+//        double[] strenght = new double[NUM_ACTIONS[0]];
+//        double stronghest = HUGE_NEGATIVE;
+//        double weakest = HUGE_POSITIVE;
+//
+//        for (int action_id = 0; action_id < NUM_ACTIONS[0]; action_id++) {
+//            strenght[action_id] = 0;
+//            HashMap<Integer, Double> currentMap = weightMatrix.actionHashMap[action_id];
+//            for (Integer feature_id : this.current_features.keySet()) {
+//                Observation obs = this.current_features.get(feature_id);
+//                double euDist = Util.calculateGridDistance(obs.position, obs.reference, this.state.getBlockSize());
+//                //strenght[action_id] += currentMap.get(feature_id) * Math.sqrt(this.current_features.get(feature_id).sqDist);
+//                strenght[action_id] += currentMap.get(feature_id) * euDist;
+//
+//            }
+//            /*if(strenght[action_id] > stronghest)
+//                stronghest = strenght[action_id];
+//            if(strenght[action_id] < weakest)
+//                weakest = strenght[action_id];*/
+//        }
+//        
+//        MCTS.LOGGER.log(Level.WARN, "\nCalculating Actions... ");
+//        for (int action_id = 0; action_id < NUM_ACTIONS[0]; action_id++) {
+//            strenght[action_id] = Utils.normalise(strenght[action_id], weakest, stronghest);
+//            MCTS.LOGGER.log(Level.WARN, "Strenght action "+action_id+": "+strenght[action_id]);
+//        }  
+//           
+//        //double[] mystrenght = {215.696, 215.696, 210.19327911886418, 253.05181801364353};
+//        //softmax(mystrenght, 4);
+//        
+//        return Util.softmax(strenght, NUM_ACTIONS[0]);
+//        
+//    }
     
     private double getKnowledgeChange(StateObservationMulti newState) {
         
@@ -499,7 +495,7 @@ public class TreeNode
         // update knowledge base with new events
         double scoreChange = this.state.getGameScore() - newState.getGameScore();
         for(Event e: newEvents){
-            //MCTS.LOGGER.log(Level.INFO, "event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+            MCTS.LOGGER.log(Level.ERROR, "event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
             MCTS.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
         }
         
@@ -601,8 +597,8 @@ public class TreeNode
 
         }
         MCTS.LOGGER.log(Level.INFO, "DistanceChange: "+delta_d);
-        //if(delta_d < 0)
-        //    delta_d = 0;
+        if(delta_d < 0)
+            delta_d = 0;
         return delta_d;
     }
     

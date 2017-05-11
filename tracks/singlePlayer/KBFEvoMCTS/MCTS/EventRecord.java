@@ -1,4 +1,4 @@
-package controllers.tracks.singlePlayer.KBFEvoMCTS.MCTS;
+package tracks.singlePlayer.KBFEvoMCTS.MCTS;
 
 import java.util.ArrayList;
 

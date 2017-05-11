@@ -1,4 +1,4 @@
-package controllers.tracks.multiPlayer.ehauckdo.MCTS;
+package tracks.multiPlayer.ehauckdo.MCTS;
 
 import core.game.Observation;
 import core.game.StateObservation;

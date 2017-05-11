@@ -1,6 +1,6 @@
-package controllers.tracks.singlePlayer.KBFEvoMCTS.MCTS;
+package tracks.singlePlayer.KBFEvoMCTS.MCTS;
 
-import controllers.tracks.singlePlayer.KBFEvoMCTS.CustomController;
+import tracks.singlePlayer.KBFEvoMCTS.CustomController;
 import core.game.Event;
 import core.game.StateObservation;
 import java.util.ArrayList;

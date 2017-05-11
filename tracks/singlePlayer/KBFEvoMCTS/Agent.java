@@ -1,7 +1,6 @@
-package controllers.tracks.singlePlayer.KBFEvoMCTS;
+package tracks.singlePlayer.KBFEvoMCTS;
 
-
-import controllers.tracks.singlePlayer.KBFEvoMCTS.MCTS.MCTS;
+import tracks.singlePlayer.KBFEvoMCTS.MCTS.MCTS;
 import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import java.util.ArrayList;

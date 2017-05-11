@@ -1,4 +1,4 @@
-package controllers.tracks.multiPlayer.ehauckdo;
+package tracks.multiPlayer.ehauckdo;
 
 import core.game.StateObservation;
 import ontology.Types;
