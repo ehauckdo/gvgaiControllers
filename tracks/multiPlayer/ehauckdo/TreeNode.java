@@ -25,20 +25,20 @@ public class TreeNode
 
     public int MCTS_ITERATIONS = 100;
     public int ROLLOUT_DEPTH = 10;
-    public int TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
     public int[] NUM_ACTIONS;
     public Types.ACTIONS[][] actions;
     public int id, oppID, no_players;
+    public boolean gameOver = false;
 
     public StateObservationMulti rootState;
 
-    public TreeNode(Random rnd, StateObservationMulti stateObs, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
-        this(null, stateObs, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
+    public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
+        this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
     }
 
-    public TreeNode(TreeNode parent, StateObservationMulti stateObs, int childIdx, Random rnd, int id, int oppID, int no_players, int[] NUM_ACTIONS, Types.ACTIONS[][] actions) {
+    public TreeNode(TreeNode parent, int childIdx, Random rnd, int id, int oppID, int no_players, int[] NUM_ACTIONS, Types.ACTIONS[][] actions) {
         this.id = id;
         this.oppID = oppID;
         this.no_players = no_players;
@@ -53,7 +53,6 @@ public class TreeNode
         this.NUM_ACTIONS = NUM_ACTIONS;
         children = new TreeNode[NUM_ACTIONS[id]];
         this.actions = actions;
-        this.rootState = stateObs;
     }
 
 
@@ -64,11 +63,15 @@ public class TreeNode
         long remaining = elapsedTimer.remainingTimeMillis();
         int numIters = 0;
 
-        int remainingLimit = 5;
+        int remainingLimit = 7;
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
+        //while(numIters < Agent.MCTS_ITERATIONS){
+
+            StateObservationMulti state = rootState.copy();
+
             ElapsedCpuTimer elapsedTimerIteration = new ElapsedCpuTimer();
-            TreeNode selected = treePolicy();
-            double delta = selected.rollOut();
+            TreeNode selected = treePolicy(state);
+            double delta = selected.rollOut(state);
             backUp(selected, delta);
 
             numIters++;
@@ -78,21 +81,20 @@ public class TreeNode
             remaining = elapsedTimer.remainingTimeMillis();
         }
 
-        System.out.println("-- " + numIters + " -- ( " + avgTimeTaken + ")");
+        System.out.println("(MCTS2) -- " + numIters + " -- ( " + avgTimeTaken + ")");
     }
 
-    public TreeNode treePolicy() {
+    public TreeNode treePolicy(StateObservationMulti state) {
 
-        TreeNode cur = this;
-        
+       TreeNode cur = this;
 
-        while (!cur.rootState.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
+        while (!state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
         {
             if (cur.notFullyExpanded()) {
-                return cur.expand();
+                return cur.expand(state);
 
             } else {
-                TreeNode next = cur.uct();
+                TreeNode next = cur.uct(state);
                 cur = next;
             }
         }
@@ -101,7 +103,7 @@ public class TreeNode
     }
 
 
-    public TreeNode expand() {
+    public TreeNode expand(StateObservationMulti state) {
 
         int bestAction = 0;
         double bestValue = -1;
@@ -126,15 +128,18 @@ public class TreeNode
         Types.ACTIONS[] oppActions = actions[oppID];
         acts[oppID] = oppActions[new Random().nextInt(oppActions.length)];
 
-        StateObservationMulti nextState = rootState.copy();
-        nextState.advance(acts);
+        state.advance(acts);
 
-        TreeNode tn = new TreeNode(this,nextState,bestAction,this.m_rnd, id, oppID, no_players, NUM_ACTIONS, actions);
+        TreeNode tn = new TreeNode(this,bestAction,this.m_rnd, id, oppID, no_players, NUM_ACTIONS, actions);
         children[bestAction] = tn;
+        
+        if(isPlayerLoses(state))
+            children[bestAction].gameOver = true;
+        
         return tn;
     }
 
-    public TreeNode uct() {
+    public TreeNode uct(StateObservationMulti state) {
 
         TreeNode selected = null;
         double bestValue = -Double.MAX_VALUE;
@@ -163,28 +168,43 @@ public class TreeNode
             + bounds[0] + " " + bounds[1]);
         }
 
+        //Roll the state:
+
+        //need to provide actions for all players to advance the forward model
+        Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
+
+        //set this agent's action
+        acts[id] = actions[id][selected.childIdx];
+
+        //get actions available to the opponent and assume they will do a random action
+        Types.ACTIONS[] oppActions = actions[oppID];
+        acts[oppID] = oppActions[new Random().nextInt(oppActions.length)];
+
+        state.advance(acts);
+        if(isPlayerLoses(state))
+            selected.gameOver = true;
+
         return selected;
     }
 
 
-    public double rollOut()
+    public double rollOut(StateObservationMulti state)
     {
-        StateObservationMulti rollerState = rootState.copy();
-        int thisDepth = 0;
+        int thisDepth = this.m_depth;
 
-        while (!finishRollout(rollerState,thisDepth)) {
+        while (!finishRollout(state,thisDepth)) {
 
             //random move for all players
             Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
             for (int i = 0; i < no_players; i++) {
                 acts[i] = actions[i][m_rnd.nextInt(NUM_ACTIONS[i])];
             }
-            rollerState.advance(acts);
+            state.advance(acts);
             thisDepth++;
         }
 
 
-        double delta = value(rollerState);
+        double delta = value(state);
 
         if(delta < bounds[0])
             bounds[0] = delta;
@@ -215,7 +235,7 @@ public class TreeNode
 
     public boolean finishRollout(StateObservationMulti rollerState, int depth)
     {
-        if(depth >= TREE_DEPTH)      //rollout end condition.
+        if(depth >= ROLLOUT_DEPTH)      //rollout end condition.
             return true;
 
         if(rollerState.isGameOver())               //end of game
@@ -247,13 +267,14 @@ public class TreeNode
         double bestValue = -Double.MAX_VALUE;
         boolean allEqual = true;
         double first = -1;
-//        System.out.println("Children lenght: "+children.length);
+        System.out.println("Children lenght: "+children.length);
+
         for (int i=0; i<children.length; i++) {
-//            System.out.print(Util.printAction(actions[0][i])+": ");
+            System.out.print(Util.printAction(actions[this.id][i])+": ");
             if(children[i] != null)
             {
-                if(!isPlayerLoses(children[i].rootState)){
-//                    System.out.print("(Tick "+children[i].rootState.getGameTick()+") OK\n");
+                if(!children[i].gameOver){
+                    System.out.print("(Tick "+(rootState.getGameTick()+1)+") OK\n");
                     if(first == -1){
                         first = children[i].nVisits;
                         selected = i;
@@ -264,16 +285,15 @@ public class TreeNode
 
                     double childValue = children[i].nVisits;
                     childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
-                    if (childValue > bestValue ) {
+                    if (childValue > bestValue) {
                         bestValue = childValue;
                         selected = i;
                     }
                 }
-//                else{
-//                    System.out.print("GameOver\n");
-//                }
+                else{
+                    System.out.print("GameOver\n");
+                }
             }
-           
         }
 
         if (selected == -1)
@@ -296,7 +316,7 @@ public class TreeNode
 
         for (int i=0; i<children.length; i++) {
 
-            if(children[i] != null && !isPlayerLoses(children[i].rootState)) {
+            if(children[i] != null && !children[i].gameOver) {
                 //double tieBreaker = m_rnd.nextDouble() * epsilon;
                 double childValue = children[i].totValue / (children[i].nVisits + this.epsilon);
                 childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
