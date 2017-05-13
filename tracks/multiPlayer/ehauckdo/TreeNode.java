@@ -230,30 +230,22 @@ public class TreeNode
                 acts[i] = actions[i][m_rnd.nextInt(NUM_ACTIONS[i])];
             }
             
-            acts[this.id] = nextRolloutAction();
+            //acts[this.id] = nextRolloutAction();
             
             state.advance(acts);
             thisDepth++;
         }
 
-
         double delta = value(state);
         
-        Vector2d pos = Util.getCurrentGridPosition(state, id);
-        double weight = MCTSPlayer.tileSet[(int)pos.x][(int)pos.y];
-        System.out.println("Rollout Position: "+pos.x+","+pos.y+", w: "+weight);
-        
-        if(weight > 1)
-            weight = 1;
+        delta = penaltyRepeatedSqm(delta, state, true);
 
         if(delta < bounds[0])
             bounds[0] = delta;
         if(delta > bounds[1])
             bounds[1] = delta;
 
-        //double normDelta = Utils.normalise(delta ,lastBounds[0], lastBounds[1]);
-
-        return weight*delta;
+        return delta;
     }
 
     public double value(StateObservationMulti a_gameState) {
@@ -307,14 +299,14 @@ public class TreeNode
         double bestValue = -Double.MAX_VALUE;
         boolean allEqual = true;
         double first = -1;
-        System.out.println("Children lenght: "+children.length);
+        //System.out.println("Children lenght: "+children.length);
 
         for (int i=0; i<children.length; i++) {
-            System.out.print(Util.printAction(actions[this.id][i])+": ");
+            //System.out.print(Util.printAction(actions[this.id][i])+": ");
             if(children[i] != null)
             {
                 if(!children[i].gameOver){
-                    System.out.print("(Tick "+(rootState.getGameTick()+1)+") OK\n");
+                    //System.out.print("(Tick "+(rootState.getGameTick()+1)+") OK\n");
                     if(first == -1){
                         first = children[i].nVisits;
                         selected = i;
@@ -331,7 +323,7 @@ public class TreeNode
                     }
                 }
                 else{
-                    System.out.print("GameOver\n");
+                    //System.out.print("GameOver\n");
                 }
             }
         }
@@ -345,7 +337,7 @@ public class TreeNode
             //If all are equal, we opt to choose for the one with the best Q.
             selected = bestAction();
         }
-        System.out.println("Selected: "+selected);
+        //System.out.println("Selected: "+selected);
         return selected;
     }
 
@@ -430,6 +422,18 @@ public class TreeNode
         }*/
         
         return chosen_action;
+    }
+
+    private double penaltyRepeatedSqm(double delta, StateObservationMulti so, boolean flag) {
+        if(flag == false)
+            return delta;
+        else{
+            Vector2d pos = Util.getCurrentGridPosition(so, id);
+            double weight = MCTSPlayer.tileSet[(int)pos.x][(int)pos.y];
+            delta = (weight >= 1) ? delta : weight*delta;
+            //System.out.println("Rollout Pos: "+pos.x+","+pos.y+"\t w: "+((weight >= 1)?1:weight)+", Delta: "+delta);
+            return delta;
+        }
     }
     
     

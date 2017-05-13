@@ -74,7 +74,7 @@ public class MCTSPlayer
         updateWeights();
         
         Vector2d pos = Util.getCurrentGridPosition(m_root.rootState, id);
-        tileSet[(int)pos.x][(int)pos.y] = 0.5;
+        tileSet[(int)pos.x][(int)pos.y] = 0.95;
         
         //Do the search within the available time.
         m_root.mctsSearch(elapsedTimer);
@@ -105,7 +105,7 @@ public class MCTSPlayer
     private void updateWeights() { 
         for(int i = 0; i < gridSize_W; i++){
             for(int j = 0; j < gridSize_H; j++){
-                tileSet[i][j] += 0.05;
+                tileSet[i][j] += 0.025;
             }
         }
     }
