@@ -4,9 +4,14 @@ import tracks.multiPlayer.advanced.sampleMCTS.*;
 import java.util.Random;
 
 import core.game.StateObservationMulti;
+import java.util.HashMap;
+import java.util.Map.Entry;
+import java.util.Set;
 import ontology.Types;
+import static ontology.Types.ACTIONS;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
+import tools.Vector2d;
 
 public class TreeNode
 {
@@ -30,9 +35,12 @@ public class TreeNode
     public int[] NUM_ACTIONS;
     public Types.ACTIONS[][] actions;
     public int id, oppID, no_players;
-    public boolean gameOver = false;
 
     public StateObservationMulti rootState;
+    
+    public boolean gameOver = false; // true if this node ever seen a GameOver
+    public RandomCollection rc = new RandomCollection();
+    public HashMap<ACTIONS, Double> actionHashMap = new HashMap();
 
     public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
         this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
@@ -53,6 +61,28 @@ public class TreeNode
         this.NUM_ACTIONS = NUM_ACTIONS;
         children = new TreeNode[NUM_ACTIONS[id]];
         this.actions = actions;
+        
+        double weight = 1/(double)NUM_ACTIONS[id];
+        for(int i = 0; i < actions[this.id].length; i++){
+            //System.out.println("Action: "+Util.printAction( actions[this.id][i])+", weight: "+weight);
+            actionHashMap.put(actions[this.id][i], weight);
+            rc.add(weight, actions[this.id][i]);
+        }
+        
+        /*HashMap<Types.ACTIONS, Integer> actionsHashMap = new HashMap();
+        for(int i = 0; i < 1000; i++){
+            Types.ACTIONS action = (Types.ACTIONS) rc.next();
+            Integer j = actionsHashMap.get(action);
+            if(j == null){
+                actionsHashMap.put(action, 1);
+            }
+            else{
+                actionsHashMap.put(action, j+1);
+            }
+        }
+        for(Types.ACTIONS ac : actionsHashMap.keySet()){
+            System.out.println(Util.printAction(ac)+": "+actionsHashMap.get(ac));
+        }*/
     }
 
 
@@ -81,7 +111,7 @@ public class TreeNode
             remaining = elapsedTimer.remainingTimeMillis();
         }
 
-        System.out.println("(MCTS2) -- " + numIters + " -- ( " + avgTimeTaken + ")");
+        System.out.println("(ehauckdo) -- " + numIters + " -- ( " + avgTimeTaken + ")");
     }
 
     public TreeNode treePolicy(StateObservationMulti state) {
@@ -199,12 +229,22 @@ public class TreeNode
             for (int i = 0; i < no_players; i++) {
                 acts[i] = actions[i][m_rnd.nextInt(NUM_ACTIONS[i])];
             }
+            
+            acts[this.id] = nextRolloutAction();
+            
             state.advance(acts);
             thisDepth++;
         }
 
 
         double delta = value(state);
+        
+        Vector2d pos = Util.getCurrentGridPosition(state, id);
+        double weight = MCTSPlayer.tileSet[(int)pos.x][(int)pos.y];
+        System.out.println("Rollout Position: "+pos.x+","+pos.y+", w: "+weight);
+        
+        if(weight > 1)
+            weight = 1;
 
         if(delta < bounds[0])
             bounds[0] = delta;
@@ -213,7 +253,7 @@ public class TreeNode
 
         //double normDelta = Utils.normalise(delta ,lastBounds[0], lastBounds[1]);
 
-        return delta;
+        return weight*delta;
     }
 
     public double value(StateObservationMulti a_gameState) {
@@ -358,4 +398,41 @@ public class TreeNode
         else
             return false;
     }
+
+    private Types.ACTIONS nextRolloutAction() {
+        ACTIONS chosen_action = (Types.ACTIONS) rc.next();
+        //System.out.println("Chosen Action: "+chosen_action);
+        
+        ACTIONS opposite_action = Util.getOppositeAction(chosen_action);
+        /*System.out.println("Opposite Action: "+opposite_action);
+        
+        System.out.println("HASHMAP BEFORE: ");
+        for(ACTIONS ac : actionHashMap.keySet()){
+            System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
+        }*/
+        
+        if(opposite_action != null){
+            rc.clear();
+            for(Entry<ACTIONS, Double> set: actionHashMap.entrySet()){
+                if(set.getKey() == opposite_action){
+                    set.setValue(set.getValue()-0.10);
+                }
+                else{
+                    set.setValue(set.getValue()+0.2);
+                }
+                rc.add(set.getValue(), set.getKey());
+            }
+        }
+        
+        /*System.out.println("HASHMAP AFTER: ");
+        for(ACTIONS ac : actionHashMap.keySet()){
+            System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
+        }*/
+        
+        return chosen_action;
+    }
+    
+    
+    
+     
 }
