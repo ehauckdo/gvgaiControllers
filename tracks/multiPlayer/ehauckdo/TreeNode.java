@@ -1,10 +1,13 @@
 package tracks.multiPlayer.ehauckdo;
 
-import tracks.multiPlayer.advanced.sampleMCTS.*;
+import core.game.Event;
+import core.game.Observation;
 import java.util.Random;
 
 import core.game.StateObservationMulti;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 import ontology.Types;
@@ -28,8 +31,7 @@ public class TreeNode
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public int childIdx;
 
-    public int MCTS_ITERATIONS = 100;
-    public int ROLLOUT_DEPTH = 10;
+    public int ROLLOUT_DEPTH = 5;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
     public int[] NUM_ACTIONS;
@@ -41,6 +43,7 @@ public class TreeNode
     public boolean gameOver = false; // true if this node ever seen a GameOver
     public RandomCollection rc = new RandomCollection();
     public HashMap<ACTIONS, Double> actionHashMap = new HashMap();
+   
 
     public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
         this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
@@ -61,28 +64,7 @@ public class TreeNode
         this.NUM_ACTIONS = NUM_ACTIONS;
         children = new TreeNode[NUM_ACTIONS[id]];
         this.actions = actions;
-        
-        double weight = 1/(double)NUM_ACTIONS[id];
-        for(int i = 0; i < actions[this.id].length; i++){
-            //System.out.println("Action: "+Util.printAction( actions[this.id][i])+", weight: "+weight);
-            actionHashMap.put(actions[this.id][i], weight);
-            rc.add(weight, actions[this.id][i]);
-        }
-        
-        /*HashMap<Types.ACTIONS, Integer> actionsHashMap = new HashMap();
-        for(int i = 0; i < 1000; i++){
-            Types.ACTIONS action = (Types.ACTIONS) rc.next();
-            Integer j = actionsHashMap.get(action);
-            if(j == null){
-                actionsHashMap.put(action, 1);
-            }
-            else{
-                actionsHashMap.put(action, j+1);
-            }
-        }
-        for(Types.ACTIONS ac : actionsHashMap.keySet()){
-            System.out.println(Util.printAction(ac)+": "+actionsHashMap.get(ac));
-        }*/
+    
     }
 
 
@@ -95,7 +77,6 @@ public class TreeNode
 
         int remainingLimit = 7;
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
-        //while(numIters < Agent.MCTS_ITERATIONS){
 
             StateObservationMulti state = rootState.copy();
 
@@ -131,7 +112,6 @@ public class TreeNode
 
         return cur;
     }
-
 
     public TreeNode expand(StateObservationMulti state) {
 
@@ -217,35 +197,44 @@ public class TreeNode
         return selected;
     }
 
-
     public double rollOut(StateObservationMulti state)
     {
         int thisDepth = this.m_depth;
+        StateObservationMulti rollerState = state.copy();
+        resetActionMap();
 
-        while (!finishRollout(state,thisDepth)) {
-
+        while (!finishRollout(rollerState,thisDepth)) {
+            
             //random move for all players
             Types.ACTIONS[] acts = new Types.ACTIONS[no_players];
             for (int i = 0; i < no_players; i++) {
                 acts[i] = actions[i][m_rnd.nextInt(NUM_ACTIONS[i])];
             }
             
-            //acts[this.id] = nextRolloutAction();
+            acts[this.id] = nextRolloutAction();
             
-            state.advance(acts);
+            rollerState.advance(acts);
             thisDepth++;
         }
-
-        double delta = value(state);
         
-        delta = penaltyRepeatedSqm(delta, state, true);
+        //updateFeatures(rollerState);
+
+        double delta = value(rollerState) - value(state);
+        
+        //delta = penaltyRepeatedSqm(delta, rollerState, true);
+        
+        updateKnowledgeBase(state, rollerState);
+        double delta_d = getDistanceChange(state, rollerState);
 
         if(delta < bounds[0])
             bounds[0] = delta;
         if(delta > bounds[1])
             bounds[1] = delta;
 
-        return delta;
+        if(delta != 0)
+            return delta;
+        else
+            return delta_d;
     }
 
     public double value(StateObservationMulti a_gameState) {
@@ -391,17 +380,33 @@ public class TreeNode
             return false;
     }
 
+    /*
+    * Reset action map so that every action has the weight
+    */
+    private void resetActionMap() {
+        double weight = 1/(double)NUM_ACTIONS[id];
+        for (ACTIONS action : actions[this.id]) {
+            //System.out.println("Action: "+Util.printAction( actions[this.id][i])+", weight: "+weight);
+            actionHashMap.put(action, weight);
+            rc.add(weight, action);
+        }
+    }
+    
+    /*
+    * Get next action in the rollout, weighting the probabilities to avoid
+    * actions that nulify the previous ones (e.g. ->, <-)
+    */
     private Types.ACTIONS nextRolloutAction() {
         ACTIONS chosen_action = (Types.ACTIONS) rc.next();
         //System.out.println("Chosen Action: "+chosen_action);
         
         ACTIONS opposite_action = Util.getOppositeAction(chosen_action);
-        /*System.out.println("Opposite Action: "+opposite_action);
+        //System.out.println("Opposite Action: "+opposite_action);
         
-        System.out.println("HASHMAP BEFORE: ");
-        for(ACTIONS ac : actionHashMap.keySet()){
-            System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
-        }*/
+        //System.out.println("HASHMAP BEFORE: ");
+        //for(ACTIONS ac : actionHashMap.keySet()){
+        //    System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
+        //}
         
         if(opposite_action != null){
             rc.clear();
@@ -416,14 +421,18 @@ public class TreeNode
             }
         }
         
-        /*System.out.println("HASHMAP AFTER: ");
-        for(ACTIONS ac : actionHashMap.keySet()){
-            System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
-        }*/
+        //System.out.println("HASHMAP AFTER: ");
+        //for(ACTIONS ac : actionHashMap.keySet()){
+        //    System.out.println(Util.printAction(ac)+": "+actionHashMap.get(ac));
+        //}
         
         return chosen_action;
     }
 
+    /*
+    * Apply penalty on the reward obtained by the simulation if it ended
+    * on a sqm that has been recently stepped on before
+    */
     private double penaltyRepeatedSqm(double delta, StateObservationMulti so, boolean flag) {
         if(flag == false)
             return delta;
@@ -436,6 +445,192 @@ public class TreeNode
         }
     }
     
+   /*
+    * Add new events happened between oldso and newso to the knowledge base
+    */
+    public void updateKnowledgeBase(StateObservationMulti oldso, StateObservationMulti newso){
+        if (oldso.getEventsHistory().size() == newso.getEventsHistory().size()) {
+            return;
+        }
+        double scoreChange = newso.getGameScore() - oldso.getGameScore();
+         
+        if(scoreChange > 0){
+            ArrayList<Event> newEvents = mapNewEvents(oldso, newso); 
+            for(Event e: newEvents){
+                System.out.println("Event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+                MCTSPlayer.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
+            }
+            if(newEvents.size() > 0)
+                MCTSPlayer.knowledgeBase.printKnowledgeBase();
+        }
+    }
+     private ArrayList<Event> mapNewEvents(StateObservationMulti oldso, StateObservationMulti newso){
+        ArrayList<Event> eventsList = new ArrayList();
+        int new_events = newso.getEventsHistory().size() - oldso.getEventsHistory().size();
+         
+        Iterator<Event> events = newso.getEventsHistory().descendingIterator();
+        for (int i = 0; i < new_events; i++) {
+            Event e = events.next();    
+            eventsList.add(e);
+        }
+        return eventsList;
+    }   
+    
+    /*
+     * Returns an array of Observations containing all features from the
+     * state passed as parameter ordered by distance
+     */
+    private ArrayList<Observation> getFeatures(StateObservationMulti stateObs) {
+        ArrayList<Observation> features = new ArrayList();  
+        ArrayList<Observation> ordered = new ArrayList();
+        Vector2d playerPos= stateObs.getAvatarPosition();
+        
+        System.out.println("NPCS:");
+        fetchObservations(stateObs.getNPCPositions(playerPos), features);
+        System.out.println("Movable:");
+        fetchObservations(stateObs.getMovablePositions(playerPos), features);
+        System.out.println("Resources:");
+        fetchObservations(stateObs.getResourcesPositions(playerPos), features);
+        System.out.println("Portals:");
+        fetchObservations(stateObs.getPortalsPositions(playerPos), features);
+          
+        for(Observation obs: features){
+            int oldSize = ordered.size();
+            for(int i = 0; i < ordered.size(); i++){
+                if(obs.sqDist < ordered.get(i).sqDist){
+                    ordered.add(i, obs);
+                    break;
+                }
+            }
+            if(ordered.size() == oldSize)
+                ordered.add(obs);
+        }
+        
+        System.out.println("Ordered:");
+        for(Observation obs :ordered){
+            System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+                            ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+        }
+        
+        
+        return features;
+    }
+    private void fetchObservations(ArrayList<Observation>[] observationLists, ArrayList<Observation> features){
+        if (observationLists != null) {
+            for (ArrayList<Observation> list : observationLists) {
+                list.stream().forEach((obs) -> {
+                    features.add(obs);
+                });
+            }
+        }
+    }
+      
+    /*
+    * Returns current sprite to be targeted, or a new one if any
+    */
+    private Observation getNextFeature(ArrayList<Observation> Di_0, StateObservationMulti stateObs){
+        if(MCTSPlayer.currentTarget != -1){
+            Observation obs = getObservation(Di_0, MCTSPlayer.currentTarget);
+            System.out.println("Current Tracking Feature (count:"+MCTSPlayer.chaseTargetTimer+","+stateObs.getGameTick()+"): "+MCTSPlayer.currentTarget);
+            
+            if(stateObs.getGameTick() > MCTSPlayer.chaseTargetTimer+200){
+                MCTSPlayer.currentTarget = -1;
+                MCTSPlayer.chaseTargetTimer = 0;
+                MCTSPlayer.ignoreTargets.add(obs);
+            }
+            if(obs != null){
+                System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+                            ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+                return obs;
+            }
+            System.out.println("Feature is destroyed. Fecthing a new one...");
+            MCTSPlayer.currentTarget = -1;
+            MCTSPlayer.chaseTargetTimer = 0;
+            MCTSPlayer.ignoreTargets.add(obs);
+        }
+            
+        for(Observation obs: Di_0){
+            if(MCTSPlayer.ignoreTargets.contains(obs) == false){
+                Integer feature_id = obs.itype;
+                int occurrences = MCTSPlayer.knowledgeBase.getOcurrences(feature_id);
+                double avg_scoreChange = MCTSPlayer.knowledgeBase.getAvgScoreChange(feature_id);
+                 if (occurrences == 0
+                        || (Di_0.get(feature_id).sqDist > 0 && avg_scoreChange > 0)) {
+                     MCTSPlayer.currentTarget = obs.obsID;
+                     MCTSPlayer.chaseTargetTimer = stateObs.getGameTick();
+                     System.out.println("Chosen Feature:");
+                     System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+                                ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+                     return obs;
+                 }
+            }
+        }
+        
+        return null;
+    }
+    private Observation getObservation(ArrayList<Observation> Di_0, int obsId){
+        for(Observation obs: Di_0){
+            if(obs.obsID == obsId)
+                return obs;
+        }
+        return null;
+    }
+    
+    /*
+    * Search for an instance of the given observation inside the passed state
+    */
+    private Observation getUpdatedFeature(StateObservationMulti so, Observation obs) {
+        if(obs != null){         
+            ArrayList<Observation> allDistances = new ArrayList(); 
+            Vector2d playerPos = so.getAvatarPosition();
+            fetchObservations(so.getNPCPositions(playerPos), allDistances);
+            fetchObservations(so.getMovablePositions(playerPos), allDistances);
+            fetchObservations(so.getResourcesPositions(playerPos), allDistances);
+            fetchObservations(so.getPortalsPositions(playerPos), allDistances);
+            for(Observation o: allDistances){
+                if(o.obsID == obs.obsID)
+                    return o;
+            }
+        }   
+        return null;
+    }
+    
+    /*
+    * Get distance scoring function from two states
+    */
+    private double getDistanceChange(StateObservationMulti oldso, StateObservationMulti newso) {
+        double delta_d = 0;
+        double blockSize = oldso.getBlockSize();
+        ArrayList<Observation> allFeatures = getFeatures(oldso);
+        
+        Observation Di_0 = getNextFeature(allFeatures, oldso);
+        Observation Di_f = getUpdatedFeature(newso, Di_0);
+        if(Di_0 != null){
+            
+            if(Di_f == null){
+                // avatar probably reached this sprite
+                delta_d = 1;
+            }
+            else{
+                double Di_0_euDist = Util.calculateGridDistance(Di_0.position, Di_0.reference, blockSize);
+                double Di_f_euDist = Util.calculateGridDistance(Di_f.position, Di_f.reference, blockSize);
+
+                System.out.println("Initial Dist: "+Di_0_euDist);
+                System.out.println("Final Dist: "+Di_f_euDist);
+
+                delta_d = 1 - (Di_f_euDist / (double)Di_0_euDist);
+            }
+
+        }
+        
+        System.out.println("DsChange: "+delta_d);
+        
+        return delta_d;
+    }
+    
+
+
+
     
     
      

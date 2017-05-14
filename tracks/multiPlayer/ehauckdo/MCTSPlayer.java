@@ -1,14 +1,12 @@
 package tracks.multiPlayer.ehauckdo;
 
-import tracks.multiPlayer.advanced.sampleMCTS.*;
+import core.game.Observation;
 import java.util.Random;
 
 import core.game.StateObservationMulti;
 import java.awt.Dimension;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 import tools.Vector2d;
@@ -40,6 +38,11 @@ public class MCTSPlayer
     public int gridSize_W;
     
     public static double tileSet[][];
+    public static KnowledgeBase knowledgeBase;
+    
+    public static int currentTarget;
+    public static double chaseTargetTimer;
+    public static ArrayList<Observation> ignoreTargets;
 
     public MCTSPlayer(Random a_rnd, StateObservationMulti so, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players)
     {
@@ -49,7 +52,13 @@ public class MCTSPlayer
         this.id = id;
         this.oppID = oppID;
         this.no_players = no_players;
+        
         initializeTileSet(so);
+        knowledgeBase = new KnowledgeBase();
+        
+        currentTarget = -1;
+        chaseTargetTimer = 0;
+        ignoreTargets = new ArrayList();
     }
 
     /**
@@ -71,10 +80,9 @@ public class MCTSPlayer
      */
     public int run(ElapsedCpuTimer elapsedTimer)
     {
-        updateWeights();
-        
-        Vector2d pos = Util.getCurrentGridPosition(m_root.rootState, id);
-        tileSet[(int)pos.x][(int)pos.y] = 0.95;
+        //updateWeights();
+        //Vector2d pos = Util.getCurrentGridPosition(m_root.rootState, id);
+        //tileSet[(int)pos.x][(int)pos.y] = 0.95;
         
         //Do the search within the available time.
         m_root.mctsSearch(elapsedTimer);
