@@ -461,8 +461,8 @@ public class TreeNode
                 //System.out.println("Event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 MCTSPlayer.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
             }
-            if(newEvents.size() > 0)
-                MCTSPlayer.knowledgeBase.printKnowledgeBase();
+            //if(newEvents.size() > 0)
+            //    MCTSPlayer.knowledgeBase.printKnowledgeBase();
         }
     }
      private ArrayList<Event> mapNewEvents(StateObservationMulti oldso, StateObservationMulti newso){
