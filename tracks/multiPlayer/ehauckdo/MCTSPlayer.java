@@ -48,7 +48,7 @@ public class MCTSPlayer
         
         currentTarget = -1;
         chaseTargetTimer = 0;
-        ignoreTargets = new ArrayList();
+        ignoreTargets = new ArrayList<Observation>();
     }
 
     /**

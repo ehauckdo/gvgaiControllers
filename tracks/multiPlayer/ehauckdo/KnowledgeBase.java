@@ -7,7 +7,7 @@ import java.util.HashMap;
  */
 public class KnowledgeBase {
 
-    HashMap<Integer, EventRecord> events = new HashMap();
+    HashMap<Integer, EventRecord> events = new HashMap<Integer, EventRecord>();
 
     public KnowledgeBase() {
     }

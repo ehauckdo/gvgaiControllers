@@ -30,7 +30,7 @@ public class TreeNode
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public int childIdx;
 
-    public int ROLLOUT_DEPTH = 3;
+    public int ROLLOUT_DEPTH = 5;
     public int TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
@@ -45,7 +45,7 @@ public class TreeNode
     
     // used to bias actions during rollout
     public RandomCollection rc = new RandomCollection(); 
-    public HashMap<ACTIONS, Double> actionHashMap = new HashMap();
+    public HashMap<ACTIONS, Double> actionHashMap = new HashMap<ACTIONS, Double>();
 
     public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
         this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
@@ -466,7 +466,7 @@ public class TreeNode
         }
     }
      private ArrayList<Event> mapNewEvents(StateObservationMulti oldso, StateObservationMulti newso){
-        ArrayList<Event> eventsList = new ArrayList();
+        ArrayList<Event> eventsList = new ArrayList<Event>();
         int new_events = newso.getEventsHistory().size() - oldso.getEventsHistory().size();
          
         Iterator<Event> events = newso.getEventsHistory().descendingIterator();
@@ -482,8 +482,8 @@ public class TreeNode
      * state passed as parameter ordered by distance
      */
     private ArrayList<Observation> getFeatures(StateObservationMulti stateObs) {
-        ArrayList<Observation> features = new ArrayList();  
-        ArrayList<Observation> ordered = new ArrayList();
+        ArrayList<Observation> features = new ArrayList<Observation>();  
+        ArrayList<Observation> ordered = new ArrayList<Observation>();
         Vector2d playerPos= stateObs.getAvatarPosition();
         
         //System.out.println("NPCS:");
@@ -582,7 +582,7 @@ public class TreeNode
     */
     private Observation getUpdatedFeature(StateObservationMulti so, Observation obs) {
         if(obs != null){         
-            ArrayList<Observation> allDistances = new ArrayList(); 
+            ArrayList<Observation> allDistances = new ArrayList<Observation>(); 
             Vector2d playerPos = so.getAvatarPosition();
             fetchObservations(so.getNPCPositions(playerPos), allDistances);
             fetchObservations(so.getMovablePositions(playerPos), allDistances);
