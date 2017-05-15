@@ -6,31 +6,21 @@ import java.util.Random;
 import core.game.StateObservationMulti;
 import java.awt.Dimension;
 import java.util.ArrayList;
-import java.util.HashMap;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
-import tools.Vector2d;
 
 /**
- * Created with IntelliJ IDEA.
- * User: Diego
- * Date: 07/11/13
- * Time: 17:13
+ * @author hauck
+ * based on the sample MCTS provided with the framework
  */
 public class MCTSPlayer
 {
 
-    /**
-     * Root of the tree.
-     */
     public TreeNode m_root;
 
     int[] NUM_ACTIONS;
     Types.ACTIONS[][] actions;
 
-    /**
-     * Random generator.
-     */
     public Random m_rnd;
     public int id, oppID, no_players;
     
@@ -94,11 +84,11 @@ public class MCTSPlayer
     }
     
     public final void initializeTileSet(StateObservationMulti so){
-        System.out.println("=== Initializing Tile Set ====");
+        //System.out.println("=== Initializing Tile Set ====");
         Dimension d = so.getWorldDimension();
         gridSize_H = (int)d.getHeight()/so.getBlockSize();
         gridSize_W = (int) d.getWidth()/so.getBlockSize();
-        System.out.println("gridSize_H: "+gridSize_H+", gridSize_W: "+gridSize_W);
+        //System.out.println("gridSize_H: "+gridSize_H+", gridSize_W: "+gridSize_W);
         
         tileSet = new double[gridSize_W][gridSize_H];
         
@@ -107,7 +97,7 @@ public class MCTSPlayer
                 tileSet[i][j] = 1;
             }
         }
-        System.out.println("=== Done ====");
+        //System.out.println("=== Done ====");
     }
 
     private void updateWeights() { 

@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.Set;
 import ontology.Types;
 import static ontology.Types.ACTIONS;
 import tools.ElapsedCpuTimer;
@@ -31,7 +30,8 @@ public class TreeNode
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public int childIdx;
 
-    public int ROLLOUT_DEPTH = 5;
+    public int ROLLOUT_DEPTH = 3;
+    public int TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
     public int[] NUM_ACTIONS;
@@ -40,10 +40,12 @@ public class TreeNode
 
     public StateObservationMulti rootState;
     
-    public boolean gameOver = false; // true if this node ever seen a GameOver
-    public RandomCollection rc = new RandomCollection();
+    // true if this node ever seen a GameOver
+    public boolean gameOver = false; 
+    
+    // used to bias actions during rollout
+    public RandomCollection rc = new RandomCollection(); 
     public HashMap<ACTIONS, Double> actionHashMap = new HashMap();
-   
 
     public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
         this(null, -1, rnd, id, oppID, no_players, NUM_ACTIONS, actions);
@@ -66,7 +68,6 @@ public class TreeNode
         this.actions = actions;
     
     }
-
 
     public void mctsSearch(ElapsedCpuTimer elapsedTimer) {
 
@@ -92,14 +93,14 @@ public class TreeNode
             remaining = elapsedTimer.remainingTimeMillis();
         }
 
-        System.out.println("(ehauckdo) -- " + numIters + " -- ( " + avgTimeTaken + ")");
+        //System.out.println("(ehauckdo) -- " + numIters + " -- ( " + avgTimeTaken + ")");
     }
 
     public TreeNode treePolicy(StateObservationMulti state) {
 
        TreeNode cur = this;
 
-        while (!state.isGameOver() && cur.m_depth < ROLLOUT_DEPTH)
+        while (!state.isGameOver() && cur.m_depth < TREE_DEPTH)
         {
             if (cur.notFullyExpanded()) {
                 return cur.expand(state);
@@ -457,7 +458,7 @@ public class TreeNode
         if(scoreChange > 0){
             ArrayList<Event> newEvents = mapNewEvents(oldso, newso); 
             for(Event e: newEvents){
-                System.out.println("Event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
+                //System.out.println("Event added, Active Type: " + e.activeTypeId + ", Passive Type: " + e.passiveTypeId);
                 MCTSPlayer.knowledgeBase.add(e.activeTypeId, e.passiveTypeId, scoreChange);
             }
             if(newEvents.size() > 0)
@@ -485,13 +486,13 @@ public class TreeNode
         ArrayList<Observation> ordered = new ArrayList();
         Vector2d playerPos= stateObs.getAvatarPosition();
         
-        System.out.println("NPCS:");
+        //System.out.println("NPCS:");
         fetchObservations(stateObs.getNPCPositions(playerPos), features);
-        System.out.println("Movable:");
+        //System.out.println("Movable:");
         fetchObservations(stateObs.getMovablePositions(playerPos), features);
-        System.out.println("Resources:");
+        //System.out.println("Resources:");
         fetchObservations(stateObs.getResourcesPositions(playerPos), features);
-        System.out.println("Portals:");
+        //System.out.println("Portals:");
         fetchObservations(stateObs.getPortalsPositions(playerPos), features);
           
         for(Observation obs: features){
@@ -506,11 +507,11 @@ public class TreeNode
                 ordered.add(obs);
         }
         
-        System.out.println("Ordered:");
-        for(Observation obs :ordered){
-            System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
-                            ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
-        }
+        //System.out.println("Ordered:");
+        //for(Observation obs :ordered){
+        //    System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+        //                    ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+        //}
         
         
         return features;
@@ -531,19 +532,19 @@ public class TreeNode
     private Observation getNextFeature(ArrayList<Observation> Di_0, StateObservationMulti stateObs){
         if(MCTSPlayer.currentTarget != -1){
             Observation obs = getObservation(Di_0, MCTSPlayer.currentTarget);
-            System.out.println("Current Tracking Feature (count:"+MCTSPlayer.chaseTargetTimer+","+stateObs.getGameTick()+"): "+MCTSPlayer.currentTarget);
+            //System.out.println("Current Tracking Feature (count:"+MCTSPlayer.chaseTargetTimer+","+stateObs.getGameTick()+"): "+MCTSPlayer.currentTarget);
             
-            if(stateObs.getGameTick() > MCTSPlayer.chaseTargetTimer+200){
+            if(stateObs.getGameTick() > MCTSPlayer.chaseTargetTimer+400){
                 MCTSPlayer.currentTarget = -1;
                 MCTSPlayer.chaseTargetTimer = 0;
                 MCTSPlayer.ignoreTargets.add(obs);
             }
             if(obs != null){
-                System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
-                            ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+                //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+                //            ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
                 return obs;
             }
-            System.out.println("Feature is destroyed. Fecthing a new one...");
+            //System.out.println("Feature is destroyed. Fecthing a new one...");
             MCTSPlayer.currentTarget = -1;
             MCTSPlayer.chaseTargetTimer = 0;
             MCTSPlayer.ignoreTargets.add(obs);
@@ -558,9 +559,9 @@ public class TreeNode
                         || (Di_0.get(feature_id).sqDist > 0 && avg_scoreChange > 0)) {
                      MCTSPlayer.currentTarget = obs.obsID;
                      MCTSPlayer.chaseTargetTimer = stateObs.getGameTick();
-                     System.out.println("Chosen Feature:");
-                     System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
-                                ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
+                     //System.out.println("Chosen Feature:");
+                     //System.out.println("Category:"+obs.category+", ID: "+obs.obsID+
+                     //           ", iType:"+obs.itype+", Dist: "+Math.sqrt(obs.sqDist));
                      return obs;
                  }
             }
@@ -615,23 +616,17 @@ public class TreeNode
                 double Di_0_euDist = Util.calculateGridDistance(Di_0.position, Di_0.reference, blockSize);
                 double Di_f_euDist = Util.calculateGridDistance(Di_f.position, Di_f.reference, blockSize);
 
-                System.out.println("Initial Dist: "+Di_0_euDist);
-                System.out.println("Final Dist: "+Di_f_euDist);
+                //System.out.println("Initial Dist: "+Di_0_euDist);
+                //System.out.println("Final Dist: "+Di_f_euDist);
 
                 delta_d = 1 - (Di_f_euDist / (double)Di_0_euDist);
             }
 
         }
         
-        System.out.println("DsChange: "+delta_d);
+        //System.out.println("DsChange: "+delta_d);
         
         return delta_d;
     }
     
-
-
-
-    
-    
-     
 }

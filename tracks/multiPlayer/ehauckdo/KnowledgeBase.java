@@ -4,7 +4,6 @@ import tracks.singlePlayer.ehauckdo.MCTS.*;
 import java.util.HashMap;
 
 /**
- *
  * @author hauck
  */
 public class KnowledgeBase {
