@@ -519,7 +519,7 @@ public class TreeNode
     private void fetchObservations(ArrayList<Observation>[] observationLists, ArrayList<Observation> features){
         if (observationLists != null) {
             for (ArrayList<Observation> list : observationLists) {
-                list.stream().forEach((obs) -> {
+                list.stream().filter((obs) -> (obs.sqDist > 0)).forEach((obs) -> {
                     features.add(obs);
                 });
             }
@@ -622,7 +622,7 @@ public class TreeNode
                 delta_d = 1 - (Di_f_euDist / (double)Di_0_euDist);
             }
 
-        }
+        }  
         
         //System.out.println("DsChange: "+delta_d);
         
