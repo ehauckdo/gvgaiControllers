@@ -2,9 +2,7 @@ package tracks.multiPlayer.ehauckdo;
 
 import core.game.Event;
 import core.game.StateObservationMulti;
-import java.util.HashMap;
 import ontology.Types;
-import org.apache.log4j.Level;
 import tools.Vector2d;
 
 /**

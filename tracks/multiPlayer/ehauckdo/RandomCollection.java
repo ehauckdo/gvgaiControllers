@@ -1,13 +1,12 @@
 package tracks.multiPlayer.ehauckdo;
 
-import tracks.singlePlayer.ehauckdo.MCTS.*;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /*
-    * @Author Peter Lawrey
-    * Source: http://stackoverflow.com/questions/6409652/random-weighted-selection-in-java
+    * Adapted from Peter Lawrey at
+    * http://stackoverflow.com/questions/6409652/random-weighted-selection-in-java
  */
 public class RandomCollection<E> {
 

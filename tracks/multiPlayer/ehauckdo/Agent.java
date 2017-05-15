@@ -5,16 +5,12 @@ import java.util.Random;
 
 import core.game.StateObservationMulti;
 import core.player.AbstractMultiPlayer;
-import java.awt.Dimension;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 
 /**
- * Created with IntelliJ IDEA.
- * User: ssamot
- * Date: 14/11/13
- * Time: 21:45
- * This is an implementation of MCTS UCT
+ *  @author hauck
+ * based on the sample MCTS provided with the GVG-AI framework
  */
 public class Agent extends AbstractMultiPlayer {
 
@@ -32,13 +28,11 @@ public class Agent extends AbstractMultiPlayer {
     public Agent(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int playerID)
     {
         //get game information
-
         no_players = so.getNoPlayers();
         id = playerID;
         oppID = (id + 1) % so.getNoPlayers();
 
         //Get the actions for all players in a static array.
-
         NUM_ACTIONS = new int[no_players];
         actions = new Types.ACTIONS[no_players][];
         for (int i = 0; i < no_players; i++) {
@@ -53,10 +47,8 @@ public class Agent extends AbstractMultiPlayer {
         }
 
         //Create the player.
-
         mctsPlayer = getPlayer(so, elapsedTimer, NUM_ACTIONS, actions, id, oppID, no_players);
      
-        
     }
 
     public MCTSPlayer getPlayer(StateObservationMulti so, ElapsedCpuTimer elapsedTimer, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {

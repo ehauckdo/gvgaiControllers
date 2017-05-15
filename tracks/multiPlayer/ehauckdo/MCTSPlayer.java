@@ -11,7 +11,7 @@ import tools.ElapsedCpuTimer;
 
 /**
  * @author hauck
- * based on the sample MCTS provided with the framework
+ * based on the sample MCTS provided with the GVG-AI framework
  */
 public class MCTSPlayer
 {
