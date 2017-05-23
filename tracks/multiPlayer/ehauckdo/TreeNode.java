@@ -44,7 +44,7 @@ public class TreeNode
     public boolean gameOver = false; 
     
     // used to bias actions during rollout
-    public RandomCollection rc = new RandomCollection(); 
+    public RandomCollection<ACTIONS> rc = new RandomCollection<ACTIONS>(); 
     public HashMap<ACTIONS, Double> actionHashMap = new HashMap<ACTIONS, Double>();
 
     public TreeNode(Random rnd, int[] NUM_ACTIONS, Types.ACTIONS[][] actions, int id, int oppID, int no_players) {
