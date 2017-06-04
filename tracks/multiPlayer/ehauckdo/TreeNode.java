@@ -30,7 +30,7 @@ public class TreeNode
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public int childIdx;
 
-    public int ROLLOUT_DEPTH = 5;
+    public int ROLLOUT_DEPTH = 10;
     public int TREE_DEPTH = 10;
     public double K = Math.sqrt(2);
     public double REWARD_DISCOUNT = 1.00;
@@ -220,22 +220,25 @@ public class TreeNode
         
         //updateFeatures(rollerState);
 
-        double delta = value(rollerState) - value(state);
-        
+        //double delta = value(rollerState) - value(state);
+        double delta = value(rollerState);
         //delta = penaltyRepeatedSqm(delta, rollerState, true);
         
-        updateKnowledgeBase(state, rollerState);
+        /*updateKnowledgeBase(state, rollerState);
         double delta_d = getDistanceChange(state, rollerState);
+        
+        if(delta == 0)
+            delta = delta_d;*/
 
         if(delta < bounds[0])
             bounds[0] = delta;
         if(delta > bounds[1])
             bounds[1] = delta;
 
-        if(delta != 0)
+        //if(delta != 0)
             return delta;
-        else
-            return delta_d;
+        /*else
+            return delta_d;*/
     }
 
     public double value(StateObservationMulti a_gameState) {
