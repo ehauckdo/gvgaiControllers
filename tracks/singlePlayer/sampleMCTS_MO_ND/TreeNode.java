@@ -241,7 +241,7 @@ public class TreeNode
 
         for (int i=0; i<children.length; i++) {
 
-            if(children[i] != null)
+            if(children[i] != null && !children[i].gameOver)
             {
                 if(first == -1)
                     first = children[i].nVisits;
@@ -278,7 +278,7 @@ public class TreeNode
 
         for (int i=0; i<children.length; i++) {
 
-            if(children[i] != null) {
+            if(children[i] != null && !children[i].gameOver) {
                 //double tieBreaker = m_rnd.nextDouble() * epsilon;
                 double childValue = children[i].totValue / (children[i].nVisits + this.epsilon);
                 childValue = Utils.noise(childValue, this.epsilon, this.m_rnd.nextDouble());     //break ties randomly
