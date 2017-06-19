@@ -3,6 +3,8 @@ package tracks.singlePlayer.sampleMCTS_GOcheck;
 import java.util.Random;
 
 import core.game.StateObservation;
+import java.util.ArrayList;
+import java.util.List;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 
@@ -26,6 +28,7 @@ public class MCTS
 
     public int num_actions;
     public Types.ACTIONS[] actions;
+    List<Integer> rolloutsPerAct = new ArrayList();
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
     {
@@ -58,8 +61,11 @@ public class MCTS
 
         //Determine the best action to take and return it.
         int action = m_root.mostVisitedAction();
+        rolloutsPerAct.add(m_root.numIters);
+
         //int action = m_root.bestAction();
         return action;
     }
+    
 
 }

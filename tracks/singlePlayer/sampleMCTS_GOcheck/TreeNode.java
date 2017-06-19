@@ -3,6 +3,7 @@ package tracks.singlePlayer.sampleMCTS_GOcheck;
 import java.util.Random;
 
 import core.game.StateObservation;
+import java.util.ArrayList;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
 import tools.Utils;
@@ -29,6 +30,7 @@ public class TreeNode
     Types.ACTIONS[] actions;
     public int ROLLOUT_DEPTH = 10;
     public double K = Math.sqrt(2);
+    public int numIters;
     
     // true if this node ever saw a GameOver
     public boolean gameOver = false; 
@@ -59,7 +61,7 @@ public class TreeNode
         double avgTimeTaken = 0;
         double acumTimeTaken = 0;
         long remaining = elapsedTimer.remainingTimeMillis();
-        int numIters = 0;
+        numIters = 0;
 
         int remainingLimit = 5;
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
@@ -78,6 +80,7 @@ public class TreeNode
             avgTimeTaken  = acumTimeTaken/numIters;
             remaining = elapsedTimer.remainingTimeMillis();
         }
+        
     }
 
     public TreeNode treePolicy(StateObservation state) {
