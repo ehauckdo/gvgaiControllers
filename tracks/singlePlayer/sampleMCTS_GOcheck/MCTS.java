@@ -66,18 +66,5 @@ public class MCTS
         //int action = m_root.bestAction();
         return action;
     }
-    
-    public void printRolloutsAverage(){
-        int average = 0;
-        if(rolloutsPerAct.size() > 0){
-            int sum = 0;
-            for(Integer i: rolloutsPerAct){
-                sum += i;
-            }
-            average = sum/rolloutsPerAct.size();   
-        }
-        System.out.println("Average: "+average);
-    }
-    
 
 }
