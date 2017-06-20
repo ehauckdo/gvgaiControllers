@@ -66,5 +66,17 @@ public class Agent extends AbstractPlayer {
         //... and return it.
         return actions[action];
     }
+    
+    public void printRolloutsAverage(){
+        int average = 0;
+        if(mctsPlayer.rolloutsPerAct.size() > 0){
+            int sum = 0;
+            for(Integer i: mctsPlayer.rolloutsPerAct){
+                sum += i;
+            }
+            average = sum/mctsPlayer.rolloutsPerAct.size();   
+        }
+        System.out.println("Average: "+average);
+    }
 
 }

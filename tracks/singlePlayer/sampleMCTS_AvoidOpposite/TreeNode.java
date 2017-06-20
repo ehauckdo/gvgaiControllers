@@ -24,6 +24,7 @@ public class TreeNode
     public int m_depth;
     protected double[] bounds = new double[]{Double.MAX_VALUE, -Double.MAX_VALUE};
     public int childIdx;
+    public int numIters;
 
     public int num_actions;
     Types.ACTIONS[] actions;
@@ -61,7 +62,7 @@ public class TreeNode
         double avgTimeTaken = 0;
         double acumTimeTaken = 0;
         long remaining = elapsedTimer.remainingTimeMillis();
-        int numIters = 0;
+        numIters = 0;
 
         int remainingLimit = 5;
         while(remaining > 2*avgTimeTaken && remaining > remainingLimit){
