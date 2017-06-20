@@ -3,7 +3,9 @@ package tracks.singlePlayer.sampleMCTS_AvoidOpposite;
 import java.util.Random;
 
 import core.game.StateObservation;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import ontology.Types;
 import ontology.Types.ACTIONS;
@@ -321,19 +323,19 @@ public class TreeNode
     private void updateActionMap(Types.ACTIONS last_action) {
         double weight = 1/(double)actions.length;
         double decremented_weight = 0;
+        List<Types.ACTIONS> opposite_actions = new ArrayList();
         
-        Types.ACTIONS opposite = null;
         if(last_action != null){
-            opposite = getOppositeAction(last_action);
-            if(opposite != null){
-                decremented_weight = weight/2.0;
-                weight += decremented_weight;
+            opposite_actions = getOppositeAction(last_action);
+            if(opposite_actions.size() > 0){
+                decremented_weight = weight * 0.5/(double)opposite_actions.size();
+                weight = weight + (weight*0.5)/(double)(actions.length-opposite_actions.size());
             }
         }   
         
         for (ACTIONS action : actions) {
             //System.out.println("Action: "+Util.printAction( actions[this.id][i])+", weight: "+weight);
-            if(action != opposite){
+            if(!opposite_actions.contains(action)){
                 actionHashMap.put(action, weight);
                 rc.add(weight, action);
             }
@@ -368,19 +370,27 @@ public class TreeNode
         return chosen_action;
     }
     
-    public static Types.ACTIONS getOppositeAction(Types.ACTIONS action){
+    public static List<Types.ACTIONS> getOppositeAction(Types.ACTIONS action){
+        List<Types.ACTIONS> opposite_actions = new ArrayList();
         switch (action) {
             case ACTION_UP:
-               return Types.ACTIONS.ACTION_DOWN;
+               opposite_actions.add(Types.ACTIONS.ACTION_DOWN);
+               break;
+               //return Types.ACTIONS.ACTION_DOWN;
             case ACTION_DOWN:
-                return Types.ACTIONS.ACTION_UP;
+               opposite_actions.add(Types.ACTIONS.ACTION_UP);
+               break;
+               //return Types.ACTIONS.ACTION_UP;
             case ACTION_LEFT:
-                 return Types.ACTIONS.ACTION_RIGHT;
+                opposite_actions.add(Types.ACTIONS.ACTION_RIGHT);
+                break;
+                //return Types.ACTIONS.ACTION_RIGHT;
             case ACTION_RIGHT:
-                 return Types.ACTIONS.ACTION_LEFT;
-            default:
-               return null;
+                opposite_actions.add(Types.ACTIONS.ACTION_LEFT);
+                break;
+                //return Types.ACTIONS.ACTION_LEFT;
         }
+        return opposite_actions;
     }
     
     public static String printAction(Types.ACTIONS action){
