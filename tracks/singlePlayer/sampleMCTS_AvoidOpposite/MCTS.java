@@ -31,6 +31,7 @@ public class MCTS
     public int num_actions;
     public Types.ACTIONS[] actions;
     List<Integer> rolloutsPerAct = new ArrayList();
+    public static List<List<Types.ACTIONS>> simulations = new ArrayList();
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
     {

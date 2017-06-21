@@ -163,15 +163,18 @@ public class TreeNode
 
     public double rollOut(StateObservation state)
     {
+        List<Types.ACTIONS> simulation = new ArrayList();
         int thisDepth = this.m_depth;
 
         while (!finishRollout(state,thisDepth)) {
 
             Types.ACTIONS act = nextRolloutAction();
+            simulation.add(act);
             state.advance(act);
             thisDepth++;
         }
-
+        
+        MCTS.simulations.add(simulation);
 
         double delta = value(state);
 
