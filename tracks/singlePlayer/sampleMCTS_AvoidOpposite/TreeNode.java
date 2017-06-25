@@ -167,6 +167,8 @@ public class TreeNode
         int thisDepth = this.m_depth;
 
         while (!finishRollout(state,thisDepth)) {
+            //int action = m_rnd.nextInt(num_actions);
+            //Types.ACTIONS act = actions[action];
 
             Types.ACTIONS act = nextRolloutAction();
             simulation.add(act);
@@ -374,7 +376,7 @@ public class TreeNode
     }
     
     public static List<Types.ACTIONS> getOppositeAction(Types.ACTIONS action){
-        List<Types.ACTIONS> opposite_actions = new ArrayList();
+        /*List<Types.ACTIONS> opposite_actions = new ArrayList();
         switch (action) {
             case ACTION_UP:
                opposite_actions.add(Types.ACTIONS.ACTION_DOWN);
@@ -393,7 +395,8 @@ public class TreeNode
                 break;
                 //return Types.ACTIONS.ACTION_LEFT;
         }
-        return opposite_actions;
+        return opposite_actions;*/
+        return MCTS.redundantActionsList.get(action);
     }
     
     public static String printAction(Types.ACTIONS action){

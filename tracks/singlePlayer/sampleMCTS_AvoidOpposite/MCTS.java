@@ -4,6 +4,7 @@ import java.util.Random;
 
 import core.game.StateObservation;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import ontology.Types;
 import tools.ElapsedCpuTimer;
@@ -32,6 +33,7 @@ public class MCTS
     public Types.ACTIONS[] actions;
     List<Integer> rolloutsPerAct = new ArrayList();
     public static List<List<Types.ACTIONS>> simulations = new ArrayList();
+    public static HashMap<Types.ACTIONS, List<Types.ACTIONS>> redundantActionsList;
 
     public MCTS(Random a_rnd, int num_actions, Types.ACTIONS[] actions)
     {
